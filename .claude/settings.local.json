@@ -8,7 +8,8 @@
       "Bash(git commit:*)",
       "Bash(git config:*)",
       "Bash(git push:*)",
-      "Bash(gh:*)"
+      "Bash(gh:*)",
+      "Bash(php:*)"
     ],
     "deny": [],
     "ask": []

@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>サイト管理システム</title>
     <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 </head>
 <body>
     <div class="container">
@@ -81,6 +82,7 @@
         let allPages = [];
         let filteredPages = [];
         let isScrapingInProgress = false;
+        let analyzedPages = new Set(); // 分析済みページのURLを記録
 
         // サイト登録フォーム
         document.getElementById('addSiteForm').addEventListener('submit', function(e) {
@@ -161,6 +163,9 @@
             currentSiteId = siteId;
             currentSiteDomain = domain;
             
+            // 分析済み状態をリセット（サイトが変更された場合）
+            analyzedPages.clear();
+            
             // 選択状態を更新
             document.querySelectorAll('.site-item').forEach(item => {
                 item.classList.remove('selected');
@@ -220,13 +225,19 @@
             pages.forEach((page, index) => {
                 const pageDiv = document.createElement('div');
                 pageDiv.className = 'page-item';
+                
+                // 分析済みかどうかを確認してボタンテキストを決定
+                const isAnalyzed = analyzedPages.has(page.url);
+                const buttonText = isAnalyzed ? '再分析' : '分析';
+                const buttonClass = isAnalyzed ? 'reanalyze-btn' : 'analyze-btn';
+                
                 pageDiv.innerHTML = `
                     <label class="page-checkbox">
                         <input type="checkbox" value="${page.url}" data-index="${index}">
                         <a href="${page.url}" target="_blank">${page.url}</a>
                     </label>
                     <div class="page-actions">
-                        <button class="analyze-btn" onclick="analyzePage('${page.url}', ${index})">分析</button>
+                        <button class="${buttonClass}" id="btn-${index}" onclick="analyzePage('${page.url}', ${index}, ${isAnalyzed})">${buttonText}</button>
                     </div>
                 `;
                 pagesList.appendChild(pageDiv);
@@ -461,7 +472,7 @@
         });
 
         // ページ分析機能
-        function analyzePage(url, index) {
+        function analyzePage(url, index, isReanalysis = false) {
             const analysisSection = document.getElementById('analysisSection');
             const analysisUrl = document.getElementById('analysisUrl');
             const analysisLoading = document.getElementById('analysisLoading');
@@ -472,25 +483,36 @@
             analysisSection.style.display = 'block';
             analysisUrl.textContent = '分析対象: ' + url;
             analysisLoading.style.display = 'block';
+            analysisLoading.textContent = isReanalysis ? '再分析中...' : '分析中...';
             seoImprovements.style.display = 'none';
             topicCluster.style.display = 'none';
             
             // スクロールして分析セクションを表示
             analysisSection.scrollIntoView({ behavior: 'smooth' });
             
+            // リクエストボディを作成
+            const formData = new FormData();
+            formData.append('url', url);
+            if (isReanalysis) {
+                formData.append('force_reanalyze', '1');
+            }
+            
             // SEO分析を実行
             fetch('seo_analysis.php', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded',
-                },
-                body: 'url=' + encodeURIComponent(url)
+                body: formData
             })
             .then(response => response.json())
             .then(data => {
                 analysisLoading.style.display = 'none';
                 
                 if (data.success) {
+                    // 分析済みとして記録
+                    analyzedPages.add(url);
+                    
+                    // ボタンを「再分析」に変更（キャッシュからの読み込み時も含む）
+                    updateAnalyzeButton(index, url);
+                    
                     displaySEOImprovements(data.improvements, data.debug, data.geminiRaw);
                     displayTopicClusterSuggestions(data.clusterSuggestions);
                 } else {
@@ -505,6 +527,16 @@
                 improvementsList.innerHTML = '<div class="error">分析中にエラーが発生しました: ' + error + '</div>';
                 seoImprovements.style.display = 'block';
             });
+        }
+        
+        // 分析ボタンを「再分析」に更新
+        function updateAnalyzeButton(index, url) {
+            const button = document.getElementById(`btn-${index}`);
+            if (button) {
+                button.textContent = '再分析';
+                button.className = 'reanalyze-btn';
+                button.setAttribute('onclick', `analyzePage('${url}', ${index}, true)`);
+            }
         }
         
         // SEO改善提案の表示
@@ -535,10 +567,18 @@
                                      improvement.type === 'fallback' ? '⚠️ フォールバック' : '📋 基本分析';
                     
                     html += `
-                        <div class="improvement-item">
-                            <h4>${typeLabel}: ${improvement.title}</h4>
-                            <p>${improvement.description}</p>
-                            <button class="execute-btn" onclick="executeImprovement(${index}, '${improvement.type}')">実行</button>
+                        <div class="improvement-item" id="improvement-${index}">
+                            <div class="improvement-header" onclick="toggleImprovementContent(${index})">
+                                <h4>${typeLabel}: ${improvement.title}</h4>
+                                <span class="toggle-icon">▼</span>
+                            </div>
+                            <div class="improvement-content" id="improvement-content-${index}">
+                                <p>${improvement.description}</p>
+                                <div class="improvement-actions">
+                                    <button class="execute-btn" onclick="executeSpecificImprovement(${index}, '${improvement.type}', '${improvement.title}')">実行</button>
+                                    <div class="execution-result-container" style="display: none;"></div>
+                                </div>
+                            </div>
                         </div>
                     `;
                 });
@@ -571,13 +611,19 @@
             topicCluster.style.display = 'block';
         }
         
-        // 改善案の実行
-        function executeImprovement(index, type) {
+        // 個別の改善提案実行
+        function executeSpecificImprovement(index, type, title) {
             const button = event.target;
+            const originalText = button.textContent;
             button.disabled = true;
             button.textContent = '実行中...';
             
             const analysisUrl = document.getElementById('analysisUrl').textContent.replace('分析対象: ', '');
+            
+            // 結果表示用のコンテナを表示
+            const resultContainer = button.parentElement.querySelector('.execution-result-container');
+            resultContainer.style.display = 'block';
+            resultContainer.innerHTML = '<div class="loading">分析を実行中...</div>';
             
             fetch('execute_improvement.php', {
                 method: 'POST',
@@ -587,25 +633,31 @@
                 body: JSON.stringify({
                     url: analysisUrl,
                     index: index,
-                    type: type
+                    type: type,
+                    title: title
                 })
             })
             .then(response => response.json())
             .then(data => {
                 button.disabled = false;
-                button.textContent = '実行';
+                button.textContent = originalText;
                 
                 if (data.success) {
-                    displayExecutionResult(data.result, button.parentElement);
+                    displaySpecificExecutionResult(data.result, resultContainer);
                 } else {
-                    alert('実行エラー: ' + data.message);
+                    resultContainer.innerHTML = '<div class="error">実行エラー: ' + data.message + '</div>';
                 }
             })
             .catch(error => {
                 button.disabled = false;
-                button.textContent = '実行';
-                alert('実行中にエラーが発生しました: ' + error);
+                button.textContent = originalText;
+                resultContainer.innerHTML = '<div class="error">実行中にエラーが発生しました: ' + error + '</div>';
             });
+        }
+        
+        // 従来の実行関数（互換性維持のため）
+        function executeImprovement(index, type) {
+            return executeSpecificImprovement(index, type, '改善提案');
         }
         
         // トピッククラスター改善の実行
@@ -641,7 +693,24 @@
             });
         }
         
-        // 実行結果の表示
+        // 個別の改善結果表示
+        function displaySpecificExecutionResult(result, container) {
+            // MarkdownをHTMLに変換
+            const htmlResult = marked.parse(result);
+            
+            container.innerHTML = `
+                <div class="execution-result">
+                    <div class="result-header" onclick="toggleResultContent(this)">
+                        <h5>改善のポイント:</h5>
+                        <span class="toggle-icon">▼</span>
+                    </div>
+                    <div class="result-content markdown-content">${htmlResult}</div>
+                    <button class="copy-result-btn" onclick="copyResultToClipboard(this)">結果をコピー</button>
+                </div>
+            `;
+        }
+        
+        // 従来の実行結果表示（互換性維持のため）
         function displayExecutionResult(result, parentElement) {
             const resultDiv = document.createElement('div');
             resultDiv.className = 'execution-result';
@@ -652,37 +721,143 @@
             parentElement.appendChild(resultDiv);
         }
         
+        // 結果をクリップボードにコピー
+        function copyResultToClipboard(button) {
+            const resultContent = button.parentElement.querySelector('.result-content').textContent;
+            navigator.clipboard.writeText(resultContent).then(() => {
+                const originalText = button.textContent;
+                button.textContent = 'コピー済み';
+                setTimeout(() => {
+                    button.textContent = originalText;
+                }, 2000);
+            }).catch(err => {
+                console.error('コピーに失敗しました:', err);
+            });
+        }
+        
         // クラスター結果の表示
         function displayClusterResult(result) {
             const clusterSuggestions = document.getElementById('clusterSuggestions');
             
+            let html = '';
+            
+            // ピラーページ情報
+            if (result.pillarPage) {
+                html += `
+                    <div class="pillar-page-section">
+                        <h4>🏛️ ピラーページ（中心となる包括的ページ）</h4>
+                        <div class="pillar-content">
+                            <p><strong>タイトル:</strong> ${result.pillarPage.title}</p>
+                            <p><strong>メタディスクリプション:</strong> ${result.pillarPage.metaDescription}</p>
+                            <p><strong>メイントピック:</strong> ${result.pillarPage.mainTopic}</p>
+                            <p><strong>ターゲットキーワード:</strong> ${result.pillarPage.targetKeywords ? result.pillarPage.targetKeywords.join(', ') : 'N/A'}</p>
+                            <p><strong>内容概要:</strong> ${result.pillarPage.description}</p>
+                            <button class="create-content-btn" onclick="createPillarContent('${encodeURIComponent(JSON.stringify(result.pillarPage))}')">ピラーページ作成</button>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            // クラスターページ群
+            if (result.clusterPages && result.clusterPages.length > 0) {
+                html += `
+                    <div class="cluster-pages-section">
+                        <h4>📄 クラスターページ群（個別詳細記事）</h4>
+                        <div class="cluster-pages-list">
+                `;
+                
+                result.clusterPages.forEach((page, index) => {
+                    html += `
+                        <div class="cluster-page-item">
+                            <h5>記事 ${index + 1}: ${page.title}</h5>
+                            <p><strong>特定トピック:</strong> ${page.specificTopic}</p>
+                            <p><strong>検索意図:</strong> ${page.searchIntent}</p>
+                            <p><strong>ターゲットキーワード:</strong> ${page.targetKeywords ? page.targetKeywords.join(', ') : 'N/A'}</p>
+                            <p><strong>ピラーページとの関係:</strong> ${page.relationToPillar}</p>
+                            <button class="create-content-btn" onclick="createClusterContent('${encodeURIComponent(JSON.stringify(page))}', ${index})">この記事を作成</button>
+                        </div>
+                    `;
+                });
+                
+                html += `
+                        </div>
+                    </div>
+                `;
+            }
+            
+            // リンク戦略
+            if (result.linkingStrategy) {
+                html += `
+                    <div class="linking-strategy-section">
+                        <h4>🔗 内部リンク戦略</h4>
+                        <div class="linking-content">
+                            <p><strong>ピラー → クラスター:</strong> ${result.linkingStrategy.pillarToCluster}</p>
+                            <p><strong>クラスター → ピラー:</strong> ${result.linkingStrategy.clusterToPillar}</p>
+                            <p><strong>クラスター間:</strong> ${result.linkingStrategy.clusterToCluster}</p>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            // 測定可能な目標
+            if (result.measurableGoals) {
+                html += `
+                    <div class="goals-section">
+                        <h4>🎯 測定可能な目標</h4>
+                        <div class="goals-content">
+                            <p><strong>重要キーワード:</strong> ${result.measurableGoals.primaryKeywords ? result.measurableGoals.primaryKeywords.join(', ') : 'N/A'}</p>
+                            <p><strong>期待流入:</strong> ${result.measurableGoals.expectedTraffic}</p>
+                            <p><strong>コンバージョン目標:</strong> ${result.measurableGoals.conversionGoals}</p>
+                        </div>
+                    </div>
+                `;
+            }
+            
             const resultDiv = document.createElement('div');
             resultDiv.className = 'cluster-result';
-            resultDiv.innerHTML = `
-                <div class="cluster-structure">
-                    <h4>構成提案:</h4>
-                    <div class="structure-content">
-                        <p><strong>タイトル:</strong> ${result.title}</p>
-                        <p><strong>メタディスクリプション:</strong> ${result.metaDescription}</p>
-                        <div class="headings">
-                            <h5>見出し構成:</h5>
-                            ${result.headings.map(h => `<p>${h}</p>`).join('')}
-                        </div>
-                        <button class="create-content-btn" onclick="createContent('${encodeURIComponent(JSON.stringify(result))}')">本文作成</button>
-                    </div>
-                </div>
-            `;
+            resultDiv.innerHTML = html;
             clusterSuggestions.appendChild(resultDiv);
         }
         
-        // 本文作成
+        // ピラーページ作成
+        function createPillarContent(encodedResult) {
+            const button = event.target;
+            button.disabled = true;
+            button.textContent = '作成中...';
+            
+            const result = JSON.parse(decodeURIComponent(encodedResult));
+            result.contentType = 'pillar';
+            
+            createContentRequest(result, button, 'ピラーページ作成');
+        }
+        
+        // クラスターページ作成
+        function createClusterContent(encodedResult, index) {
+            const button = event.target;
+            button.disabled = true;
+            button.textContent = '作成中...';
+            
+            const result = JSON.parse(decodeURIComponent(encodedResult));
+            result.contentType = 'cluster';
+            result.index = index;
+            
+            createContentRequest(result, button, 'この記事を作成');
+        }
+        
+        // 従来の本文作成（互換性維持）
         function createContent(encodedResult) {
             const button = event.target;
             button.disabled = true;
             button.textContent = '作成中...';
             
             const result = JSON.parse(decodeURIComponent(encodedResult));
+            result.contentType = 'traditional';
             
+            createContentRequest(result, button, '本文作成');
+        }
+        
+        // 統一されたコンテンツ作成リクエスト
+        function createContentRequest(result, button, originalText) {
             fetch('create_content.php', {
                 method: 'POST',
                 headers: {
@@ -693,7 +868,7 @@
             .then(response => response.json())
             .then(data => {
                 button.disabled = false;
-                button.textContent = '本文作成';
+                button.textContent = originalText;
                 
                 if (data.success) {
                     displayContentResult(data.content, button.parentElement);
@@ -703,7 +878,7 @@
             })
             .catch(error => {
                 button.disabled = false;
-                button.textContent = '本文作成';
+                button.textContent = originalText;
                 alert('作成中にエラーが発生しました: ' + error);
             });
         }
@@ -731,6 +906,43 @@
             setTimeout(() => {
                 button.textContent = originalText;
             }, 2000);
+        }
+
+        // トグル機能
+        function toggleImprovementContent(index) {
+            const content = document.getElementById(`improvement-content-${index}`);
+            const icon = content.parentElement.querySelector('.toggle-icon');
+            
+            if (content.classList.contains('collapsed')) {
+                content.classList.remove('collapsed');
+                icon.classList.remove('collapsed');
+            } else {
+                content.classList.add('collapsed');
+                icon.classList.add('collapsed');
+            }
+        }
+        
+        function toggleResultContent(header) {
+            const content = header.nextElementSibling;
+            const icon = header.querySelector('.toggle-icon');
+            
+            if (content.classList.contains('collapsed')) {
+                content.classList.remove('collapsed');
+                icon.classList.remove('collapsed');
+            } else {
+                content.classList.add('collapsed');
+                icon.classList.add('collapsed');
+            }
+        }
+
+        // 分析済みページ状態をチェックして復元
+        function checkExistingAnalyses() {
+            // 現在表示されているページについて分析済み状態を確認
+            filteredPages.forEach((page, index) => {
+                // 実際にはサーバーサイドで確認する必要があるが、
+                // 簡単のためクライアントサイドで管理
+                // 将来的には get_analyzed_pages.php などで確認
+            });
         }
 
         // ページロード時にサイト一覧を読み込み

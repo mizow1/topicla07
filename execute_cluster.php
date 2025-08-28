@@ -103,15 +103,21 @@ function generateTopicClusterStructure($analysis, $url, $html, $apiKey) {
     
     // 従来の結果とGemini分析を組み合わせ
     $clusterStructure = [
-        'title' => $geminiClusterAnalysis['title'] ?? generateOptimizedTitle($mainKeywords, $industry),
-        'metaDescription' => $geminiClusterAnalysis['metaDescription'] ?? generateOptimizedMetaDescription($mainKeywords, $industry),
-        'headings' => $geminiClusterAnalysis['headings'] ?? generateHeadingStructure($mainKeywords, $industry),
-        'pillarContent' => [
+        'pillarPage' => $geminiClusterAnalysis['pillarPage'] ?? [
             'type' => 'pillar',
-            'description' => 'メインとなる包括的なコンテンツ',
-            'aiInsights' => $geminiClusterAnalysis['insights'] ?? 'AI分析が利用できませんでした'
+            'title' => generateOptimizedTitle($mainKeywords, $industry),
+            'metaDescription' => generateOptimizedMetaDescription($mainKeywords, $industry),
+            'mainTopic' => !empty($mainKeywords) ? $mainKeywords[0] : '主要テーマ',
+            'targetKeywords' => $mainKeywords,
+            'description' => 'このピラーページでは、' . (!empty($mainKeywords) ? $mainKeywords[0] : '主要テーマ') . 'に関する包括的な情報を提供し、関連する全ての側面を網羅します。初心者から上級者まで役立つ実践的な内容で構成されています。'
         ],
-        'clusterPages' => $geminiClusterAnalysis['clusterPages'] ?? generateClusterPages($mainKeywords, $industry),
+        'clusterPages' => $geminiClusterAnalysis['clusterPages'] ?? generateEnhancedClusterPages($mainKeywords, $industry),
+        'linkingStrategy' => $geminiClusterAnalysis['linkingStrategy'] ?? generateLinkingStrategy($mainKeywords),
+        'measurableGoals' => $geminiClusterAnalysis['measurableGoals'] ?? [
+            'primaryKeywords' => $mainKeywords,
+            'expectedTraffic' => '月間検索流入を30-50%増加',
+            'conversionGoals' => 'お問い合わせ率の向上とエンゲージメント指標の改善'
+        ],
         'geminiAnalysis' => $geminiClusterAnalysis
     ];
     
@@ -126,46 +132,58 @@ function analyzeTopicClusterWithGemini($html, $url, $apiKey) {
         $text = substr($text, 0, 8000) . '...';
     }
     
-    $prompt = "以下のWebページを分析して、トピッククラスター理論に基づいたSEO最適化の構成を提案してください。
+    $prompt = "このWebページを中心としたトピッククラスター戦略を設計してください。
 
 URL: {$url}
+ページ内容: {$text}
 
-ページ内容:
-{$text}
+## トピッククラスター理論について
+トピッククラスターは以下の構造で構成されます：
+1. **ピラーページ（Hub）**: 広範囲なトピックを包括的にカバーする中心的なページ
+2. **クラスターページ（Spoke）**: ピラーページのトピックに関連する個別の詳細記事
+3. **内部リンク**: ピラーページとクラスターページを相互にリンクし、権威性を向上
 
-以下の形式でJSON形式で回答してください：
+以下のJSON形式で、正確なトピッククラスター構造を提案してください：
 
 {
-  \"title\": \"最適化されたページタイトル（50-60文字）\",
-  \"metaDescription\": \"SEO最適化されたメタディスクリプション（140-160文字）\",
-  \"headings\": [
-    \"H1: メインタイトル\",
-    \"H2: 主要セクション1\",
-    \"H3: サブセクション1-1\",
-    \"H3: サブセクション1-2\",
-    \"H2: 主要セクション2\",
-    \"H2: 主要セクション3\"
-  ],
-  \"insights\": \"トピッククラスター戦略の詳細分析\",
+  \"pillarPage\": {
+    \"type\": \"pillar\",
+    \"title\": \"包括的なピラーページタイトル（50-60文字）\",
+    \"metaDescription\": \"ピラーページ用メタディスクリプション（140-160文字）\",
+    \"mainTopic\": \"中心となる広範囲なトピック\",
+    \"targetKeywords\": [\"メインキーワード\", \"関連キーワード\"],
+    \"description\": \"このピラーページが網羅すべき内容の概要\"
+  },
   \"clusterPages\": [
     {
-      \"title\": \"関連ページ1のタイトル\",
-      \"description\": \"ページの説明\",
-      \"targetKeywords\": [\"キーワード1\", \"キーワード2\"]
+      \"type\": \"cluster\",
+      \"title\": \"個別トピック記事のタイトル\",
+      \"metaDescription\": \"クラスター記事用メタディスクリプション\",
+      \"specificTopic\": \"このページが深掘りする特定のサブトピック\",
+      \"targetKeywords\": [\"ロングテールキーワード1\", \"ロングテールキーワード2\"],
+      \"relationToPillar\": \"ピラーページとの関係性\",
+      \"searchIntent\": \"検索意図の分類（情報収集/商品調査/取引型/ナビゲーション）\"
     }
   ],
-  \"mainKeywords\": [\"抽出されたメインキーワード\"],
-  \"competitiveAdvantage\": \"競合との差別化ポイント\",
-  \"seoStrategy\": \"具体的なSEO戦略\"
+  \"linkingStrategy\": {
+    \"pillarToCluster\": \"ピラーページからクラスターページへのリンク戦略\",
+    \"clusterToPillar\": \"クラスターページからピラーページへのリンク戦略\",
+    \"clusterToCluster\": \"クラスター同士のリンク戦略\"
+  },
+  \"contentGaps\": [\"現在不足している関連コンテンツ\"],
+  \"competitorAnalysis\": \"競合サイトとの差別化ポイント\",
+  \"measurableGoals\": {
+    \"primaryKeywords\": [\"順位向上を目指すキーワード\"],
+    \"expectedTraffic\": \"期待される流入増加\",
+    \"conversionGoals\": \"コンバージョン目標\"
+  }
 }
 
-分析観点：
-1. 現在のコンテンツの主要テーマ
-2. ターゲットキーワードの特定
-3. 検索意図の分析
-4. 競合との差別化
-5. 関連トピックとクラスターページの提案
-6. E-A-T（専門性・権威性・信頼性）の向上";
+重要：
+- ピラーページは1つの広範囲なトピックを扱う
+- クラスターページは最低5-8個提案し、それぞれ異なる検索意図に対応
+- 各ページが独立したSEO価値を持ちつつ、相互に支え合う構造
+- 実際に実装可能な具体的な内容で提案";
     
     $data = [
         'contents' => [
@@ -380,37 +398,94 @@ function generateHeadingStructure($keywords, $industry) {
     return $structures[$industry] ?? $structures['general'];
 }
 
-function generateClusterPages($keywords, $industry) {
+function generateEnhancedClusterPages($keywords, $industry) {
     $mainKeyword = !empty($keywords) ? $keywords[0] : '主要テーマ';
     
     $clusterPages = [
         [
+            'type' => 'cluster',
             'title' => $mainKeyword . '入門：初心者のための基礎ガイド',
-            'description' => '初心者向けの基本的な内容',
-            'targetKeywords' => [$mainKeyword . ' 初心者', $mainKeyword . ' 基礎', $mainKeyword . ' 入門']
+            'metaDescription' => $mainKeyword . 'の基本から学べる初心者向けガイド。わかりやすい解説で、基礎知識を確実に身につけることができます。',
+            'specificTopic' => $mainKeyword . 'の基礎知識と導入方法',
+            'targetKeywords' => [$mainKeyword . ' 初心者', $mainKeyword . ' 基礎', $mainKeyword . ' 入門', $mainKeyword . ' やり方'],
+            'relationToPillar' => 'ピラーページで紹介される基礎部分を詳細に解説し、初心者が理解しやすい形で情報を提供',
+            'searchIntent' => '情報収集'
         ],
         [
-            'title' => $mainKeyword . '活用事例：成功例と失敗例から学ぶ',
-            'description' => '具体的な活用事例とケーススタディ',
-            'targetKeywords' => [$mainKeyword . ' 事例', $mainKeyword . ' 成功例', $mainKeyword . ' ケーススタディ']
+            'type' => 'cluster',
+            'title' => $mainKeyword . '活用事例：成功例と失敗例から学ぶ実践ガイド',
+            'metaDescription' => $mainKeyword . 'の実際の活用事例を紹介。成功例と失敗例の両方から学び、効果的な実践方法を理解できます。',
+            'specificTopic' => '具体的な活用事例とケーススタディ',
+            'targetKeywords' => [$mainKeyword . ' 事例', $mainKeyword . ' 成功例', $mainKeyword . ' ケーススタディ', $mainKeyword . ' 実例'],
+            'relationToPillar' => 'ピラーページの理論を実践例で補完し、読者により具体的な理解を提供',
+            'searchIntent' => '情報収集/商品調査'
         ],
         [
-            'title' => $mainKeyword . 'ツール比較：おすすめの選び方',
-            'description' => '関連ツールの比較と選定基準',
-            'targetKeywords' => [$mainKeyword . ' ツール', $mainKeyword . ' 比較', $mainKeyword . ' おすすめ']
+            'type' => 'cluster',
+            'title' => $mainKeyword . 'ツール比較2024：おすすめの選び方と評価基準',
+            'metaDescription' => $mainKeyword . '関連ツールを徹底比較。機能・価格・使いやすさから最適なツールを選ぶためのガイドです。',
+            'specificTopic' => '関連ツールの比較と選定基準',
+            'targetKeywords' => [$mainKeyword . ' ツール', $mainKeyword . ' 比較', $mainKeyword . ' おすすめ', $mainKeyword . ' 選び方'],
+            'relationToPillar' => 'ピラーページで触れるツール選択について詳細な比較情報を提供',
+            'searchIntent' => '商品調査/取引型'
         ],
         [
-            'title' => $mainKeyword . '最新トレンド：業界動向と将来展望',
-            'description' => '最新の業界動向と将来の展望',
-            'targetKeywords' => [$mainKeyword . ' トレンド', $mainKeyword . ' 最新', $mainKeyword . ' 将来']
+            'type' => 'cluster',
+            'title' => $mainKeyword . '最新トレンド2024：業界動向と将来展望',
+            'metaDescription' => $mainKeyword . '業界の最新トレンドと将来の展望を解説。今後の動向を把握し、戦略立案に活用できます。',
+            'specificTopic' => '最新の業界動向と将来の展望',
+            'targetKeywords' => [$mainKeyword . ' トレンド', $mainKeyword . ' 最新', $mainKeyword . ' 将来', $mainKeyword . ' 2024'],
+            'relationToPillar' => 'ピラーページの内容をより時事性の高い情報で補完し、最新情報を提供',
+            'searchIntent' => '情報収集'
         ],
         [
-            'title' => $mainKeyword . 'のよくある質問と回答集',
-            'description' => 'FAQ形式での疑問解決',
-            'targetKeywords' => [$mainKeyword . ' FAQ', $mainKeyword . ' 質問', $mainKeyword . ' 疑問']
+            'type' => 'cluster',
+            'title' => $mainKeyword . 'でよくある質問50選：疑問解決FAQ集',
+            'metaDescription' => $mainKeyword . 'に関するよくある質問を網羅的に回答。初心者から上級者まで役立つFAQ集です。',
+            'specificTopic' => 'よくある質問と詳細な回答',
+            'targetKeywords' => [$mainKeyword . ' FAQ', $mainKeyword . ' 質問', $mainKeyword . ' 疑問', $mainKeyword . ' 回答'],
+            'relationToPillar' => 'ピラーページでカバーしきれない細かな疑問点に対する詳細回答を提供',
+            'searchIntent' => '情報収集/ナビゲーション'
+        ],
+        [
+            'type' => 'cluster',
+            'title' => $mainKeyword . '実装手順：ステップバイステップガイド',
+            'metaDescription' => $mainKeyword . 'の実装を段階的に解説。具体的な手順で、確実に導入・活用できるガイドです。',
+            'specificTopic' => '具体的な実装手順と実践方法',
+            'targetKeywords' => [$mainKeyword . ' 実装', $mainKeyword . ' 手順', $mainKeyword . ' やり方', $mainKeyword . ' 方法'],
+            'relationToPillar' => 'ピラーページの概要を実際の作業手順に落とし込んだ実践的な情報を提供',
+            'searchIntent' => '取引型'
+        ],
+        [
+            'type' => 'cluster',
+            'title' => $mainKeyword . 'のメリット・デメリット：詳細分析と対策',
+            'metaDescription' => $mainKeyword . 'の利点と注意点を詳細分析。メリットを最大化し、デメリットを軽減する方法を解説。',
+            'specificTopic' => 'メリット・デメリットの詳細分析',
+            'targetKeywords' => [$mainKeyword . ' メリット', $mainKeyword . ' デメリット', $mainKeyword . ' 利点', $mainKeyword . ' 欠点'],
+            'relationToPillar' => 'ピラーページでの概要説明を更に深掘りし、判断材料となる詳細情報を提供',
+            'searchIntent' => '情報収集/商品調査'
+        ],
+        [
+            'type' => 'cluster',
+            'title' => $mainKeyword . '費用対効果：コスト分析と投資判断ガイド',
+            'metaDescription' => $mainKeyword . 'の費用対効果を詳細分析。投資判断に必要な情報と、コスト最適化の方法を解説。',
+            'specificTopic' => '費用対効果とコスト分析',
+            'targetKeywords' => [$mainKeyword . ' 費用', $mainKeyword . ' コスト', $mainKeyword . ' 料金', $mainKeyword . ' 価格'],
+            'relationToPillar' => 'ピラーページの概要を経済的観点から詳細分析し、投資判断を支援',
+            'searchIntent' => '商品調査/取引型'
         ]
     ];
     
     return $clusterPages;
+}
+
+function generateLinkingStrategy($keywords) {
+    $mainKeyword = !empty($keywords) ? $keywords[0] : '主要テーマ';
+    
+    return [
+        'pillarToCluster' => 'ピラーページから関連する各クラスターページへ適切なアンカーテキストでリンク。「' . $mainKeyword . 'の詳細な実装方法」「' . $mainKeyword . '事例集」などの自然な文脈でリンクを配置。',
+        'clusterToPillar' => '各クラスターページからピラーページに「' . $mainKeyword . '完全ガイド」「' . $mainKeyword . '総合情報」として戻るリンクを設置。読者がより包括的な情報にアクセスできるように。',
+        'clusterToCluster' => 'クラスター間では関連性の高いページ同士をリンク。例：「実装手順」ページから「よくある質問」ページへ、「メリット・デメリット」から「費用対効果」ページへのリンクなど。'
+    ];
 }
 ?>

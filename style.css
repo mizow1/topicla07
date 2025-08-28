@@ -433,6 +433,21 @@ button:disabled {
     background-color: #8e44ad;
 }
 
+.reanalyze-btn {
+    background-color: #e67e22;
+    color: white;
+    padding: 6px 12px;
+    font-size: 12px;
+    border-radius: 4px;
+    border: none;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+.reanalyze-btn:hover {
+    background-color: #d68910;
+}
+
 /* 分析結果セクション */
 .analysis-url {
     font-weight: bold;
@@ -460,6 +475,35 @@ button:disabled {
     border-radius: 6px;
     padding: 20px;
     margin-bottom: 15px;
+}
+
+/* トグル対応 */
+.improvement-header, .result-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+    margin-bottom: 10px;
+}
+
+.toggle-icon {
+    font-size: 14px;
+    color: #6c757d;
+    transition: transform 0.3s ease;
+}
+
+.toggle-icon.collapsed {
+    transform: rotate(-90deg);
+}
+
+.improvement-content, .result-content {
+    transition: max-height 0.3s ease;
+    overflow: hidden;
+}
+
+.improvement-content.collapsed, .result-content.collapsed {
+    max-height: 0;
+    margin-bottom: 0;
 }
 
 .improvement-item h4, .cluster-item h4 {
@@ -511,6 +555,157 @@ button:disabled {
 .result-content {
     color: #495057;
     font-size: 14px;
+}
+
+/* Markdownコンテンツのスタイル */
+.markdown-content {
+    line-height: 1.6;
+}
+
+.markdown-content h1 {
+    color: #2c3e50;
+    border-bottom: 2px solid #3498db;
+    padding-bottom: 10px;
+    margin-bottom: 20px;
+    font-size: 1.8em;
+}
+
+.markdown-content h2 {
+    color: #34495e;
+    border-bottom: 1px solid #bdc3c7;
+    padding-bottom: 8px;
+    margin-top: 25px;
+    margin-bottom: 15px;
+    font-size: 1.4em;
+}
+
+.markdown-content h3 {
+    color: #34495e;
+    margin-top: 20px;
+    margin-bottom: 12px;
+    font-size: 1.2em;
+}
+
+.markdown-content h4 {
+    color: #34495e;
+    margin-top: 15px;
+    margin-bottom: 10px;
+    font-size: 1.1em;
+}
+
+.markdown-content h5, .markdown-content h6 {
+    color: #34495e;
+    margin-top: 12px;
+    margin-bottom: 8px;
+}
+
+.markdown-content p {
+    margin-bottom: 15px;
+}
+
+.markdown-content ul, .markdown-content ol {
+    margin-bottom: 15px;
+    padding-left: 25px;
+}
+
+.markdown-content li {
+    margin-bottom: 5px;
+}
+
+.markdown-content blockquote {
+    border-left: 4px solid #3498db;
+    background-color: #f8f9fa;
+    margin: 15px 0;
+    padding: 10px 20px;
+    color: #555;
+    font-style: italic;
+}
+
+.markdown-content code {
+    background-color: #f1f2f6;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-family: 'Courier New', monospace;
+    font-size: 0.9em;
+    color: #e74c3c;
+}
+
+.markdown-content pre {
+    background-color: #2c3e50;
+    color: #ecf0f1;
+    padding: 15px;
+    border-radius: 6px;
+    overflow-x: auto;
+    margin: 15px 0;
+    font-family: 'Courier New', monospace;
+    font-size: 0.9em;
+    line-height: 1.4;
+}
+
+.markdown-content pre code {
+    background: none;
+    color: inherit;
+    padding: 0;
+    font-size: inherit;
+}
+
+.markdown-content table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 15px 0;
+    font-size: 0.9em;
+}
+
+.markdown-content th, .markdown-content td {
+    border: 1px solid #ddd;
+    padding: 8px 12px;
+    text-align: left;
+}
+
+.markdown-content th {
+    background-color: #f8f9fa;
+    font-weight: bold;
+    color: #2c3e50;
+}
+
+.markdown-content tr:nth-child(even) {
+    background-color: #f8f9fa;
+}
+
+.markdown-content strong, .markdown-content b {
+    font-weight: bold;
+    color: #2c3e50;
+}
+
+.markdown-content em, .markdown-content i {
+    font-style: italic;
+}
+
+.markdown-content a {
+    color: #3498db;
+    text-decoration: none;
+}
+
+.markdown-content a:hover {
+    text-decoration: underline;
+}
+
+.markdown-content hr {
+    border: none;
+    border-top: 2px solid #bdc3c7;
+    margin: 25px 0;
+}
+
+/* タスクリストのスタイル */
+.markdown-content input[type="checkbox"] {
+    margin-right: 8px;
+    vertical-align: middle;
+}
+
+/* 特別なマークダウン記号のスタイル */
+.markdown-content .emoji {
+    font-size: 1.2em;
+    vertical-align: middle;
 }
 
 /* クラスター構成表示 */
@@ -610,6 +805,130 @@ button:disabled {
     padding: 15px;
     border: 1px solid #f5c6cb;
     border-radius: 6px;
+}
+
+/* 個別改善提案のスタイル */
+.improvement-actions {
+    margin-top: 10px;
+}
+
+.execution-result-container {
+    margin-top: 15px;
+    padding: 10px;
+    background: #f8f9fa;
+    border-radius: 4px;
+    border-left: 4px solid #28a745;
+    border: 1px solid #e9ecef;
+}
+
+.copy-result-btn {
+    background: #6c757d;
+    color: white;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    margin-top: 10px;
+}
+
+.copy-result-btn:hover {
+    background: #5a6268;
+}
+
+.loading {
+    color: #666;
+    font-style: italic;
+}
+
+/* トピッククラスター関連のスタイル */
+.pillar-page-section {
+    margin-bottom: 25px;
+    padding: 20px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-radius: 8px;
+}
+
+.pillar-page-section h4 {
+    color: white;
+    border-bottom: 2px solid rgba(255,255,255,0.3);
+    margin-bottom: 15px;
+}
+
+.pillar-content p {
+    margin-bottom: 8px;
+    background: rgba(255,255,255,0.1);
+    padding: 5px 10px;
+    border-radius: 4px;
+}
+
+.cluster-pages-section {
+    margin-bottom: 25px;
+    padding: 20px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    border: 1px solid #dee2e6;
+}
+
+.cluster-pages-section h4 {
+    color: #495057;
+    margin-bottom: 15px;
+}
+
+.cluster-page-item {
+    background: white;
+    margin-bottom: 15px;
+    padding: 15px;
+    border-radius: 6px;
+    border-left: 4px solid #17a2b8;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.cluster-page-item h5 {
+    color: #17a2b8;
+    margin-bottom: 10px;
+    font-size: 1.1em;
+}
+
+.cluster-page-item p {
+    margin-bottom: 6px;
+    font-size: 0.9em;
+}
+
+.linking-strategy-section {
+    margin-bottom: 20px;
+    padding: 15px;
+    background: #fff3cd;
+    border-radius: 8px;
+    border: 1px solid #ffeaa7;
+}
+
+.linking-strategy-section h4 {
+    color: #856404;
+}
+
+.linking-content p {
+    margin-bottom: 8px;
+    padding: 5px 10px;
+    background: rgba(255,255,255,0.5);
+    border-radius: 4px;
+}
+
+.goals-section {
+    padding: 15px;
+    background: #d1ecf1;
+    border-radius: 8px;
+    border: 1px solid #bee5eb;
+}
+
+.goals-section h4 {
+    color: #0c5460;
+}
+
+.goals-content p {
+    margin-bottom: 6px;
+    font-weight: 500;
 }
 
 /* レスポンシブ対応の追加 */

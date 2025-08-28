@@ -13,6 +13,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 }
 
 $url = $_POST['url'] ?? '';
+$forceReanalyze = $_POST['force_reanalyze'] ?? false;
 
 if (empty($url)) {
     echo json_encode(['success' => false, 'message' => 'URLが指定されていません']);
@@ -22,6 +23,38 @@ if (empty($url)) {
 try {
     // 緊急デバッグ: 現在時刻を記録
     $debugTimestamp = date('Y-m-d H:i:s');
+    
+    // 既存の分析結果があるかチェック（再分析が強制されていない場合のみ）
+    $existingAnalysis = null;
+    if (!$forceReanalyze) {
+        $existingAnalysis = checkExistingAnalysis($url, $pdo);
+        if ($existingAnalysis) {
+            echo json_encode([
+                'success' => true,
+                'improvements' => json_decode($existingAnalysis['improvements'], true) ?? [],
+                'clusterSuggestions' => ['description' => 'データベースから取得した分析結果', 'mainTopic' => $existingAnalysis['title'], 'url' => $url],
+                'analysis' => ['title' => ['content' => $existingAnalysis['title']], 'cached' => true, 'hasExistingAnalysis' => true],
+                'debug' => ['fromCache' => true, 'analysisDate' => $existingAnalysis['analysis_date']]
+            ]);
+            exit;
+        }
+    }
+    
+    // 分析レコードを作成または更新
+    if ($forceReanalyze) {
+        $existingAnalysis = checkExistingAnalysis($url, $pdo);
+        if ($existingAnalysis) {
+            // 既存の分析を「分析中」状態に更新
+            $analysisId = $existingAnalysis['id'];
+            updateAnalysisStatus($analysisId, 'analyzing', $pdo);
+        } else {
+            // 新規作成
+            $analysisId = createAnalysisRecord($url, $pdo);
+        }
+    } else {
+        // 新規作成
+        $analysisId = createAnalysisRecord($url, $pdo);
+    }
     
     // URLからページ内容を取得
     $context = stream_context_create([
@@ -35,6 +68,7 @@ try {
     $html = @file_get_contents($url, false, $context);
     
     if ($html === false) {
+        updateAnalysisStatus($analysisId, 'failed', $pdo);
         echo json_encode(['success' => false, 'message' => 'ページの取得に失敗しました', 'timestamp' => $debugTimestamp]);
         exit;
     }
@@ -66,6 +100,9 @@ try {
         'geminiRawExists' => isset($geminiAnalysis['rawAnalysis']),
         'geminiError' => $geminiAnalysis['error'] ?? null
     ];
+    
+    // 分析結果をデータベースに保存
+    saveAnalysisResults($analysisId, $analysis, $improvements, $geminiAnalysis, $pdo);
     
     echo json_encode([
         'success' => true,
@@ -581,5 +618,67 @@ function generateTopicClusterSuggestions($url, $analysis, $geminiAnalysis = null
         'url' => $url,
         'geminiInsights' => $geminiAnalysis['contentQuality'] ?? null
     ];
+}
+
+// 既存の分析結果をチェック（永続保存）
+function checkExistingAnalysis($url, $pdo) {
+    try {
+        $stmt = $pdo->prepare("SELECT * FROM seo_analyses WHERE url = ? AND status = 'completed' ORDER BY analysis_date DESC LIMIT 1");
+        $stmt->execute([$url]);
+        return $stmt->fetch(PDO::FETCH_ASSOC);
+    } catch (PDOException $e) {
+        // テーブルが存在しない場合は null を返す
+        return null;
+    }
+}
+
+// 分析レコードを作成
+function createAnalysisRecord($url, $pdo) {
+    try {
+        $stmt = $pdo->prepare("INSERT INTO seo_analyses (url, status) VALUES (?, 'analyzing')");
+        $stmt->execute([$url]);
+        return $pdo->lastInsertId();
+    } catch (PDOException $e) {
+        // テーブルが存在しない場合は 0 を返す
+        return 0;
+    }
+}
+
+// 分析状態を更新
+function updateAnalysisStatus($analysisId, $status, $pdo) {
+    if ($analysisId === 0) return;
+    try {
+        $stmt = $pdo->prepare("UPDATE seo_analyses SET status = ? WHERE id = ?");
+        $stmt->execute([$status, $analysisId]);
+    } catch (PDOException $e) {
+        // エラーは無視
+    }
+}
+
+// 分析結果を保存
+function saveAnalysisResults($analysisId, $analysis, $improvements, $geminiAnalysis, $pdo) {
+    if ($analysisId === 0) return;
+    try {
+        $title = $analysis['title']['content'] ?? '';
+        $metaDescription = '';
+        
+        $stmt = $pdo->prepare("UPDATE seo_analyses SET 
+            title = ?, 
+            analysis_data = ?, 
+            improvements = ?, 
+            gemini_analysis = ?, 
+            status = 'completed' 
+            WHERE id = ?");
+        
+        $stmt->execute([
+            $title,
+            json_encode($analysis, JSON_UNESCAPED_UNICODE),
+            json_encode($improvements, JSON_UNESCAPED_UNICODE),
+            json_encode($geminiAnalysis, JSON_UNESCAPED_UNICODE),
+            $analysisId
+        ]);
+    } catch (PDOException $e) {
+        // エラーは無視
+    }
 }
 ?>
