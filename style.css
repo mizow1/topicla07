@@ -238,3 +238,176 @@ button:disabled {
 .pages-list::-webkit-scrollbar-thumb:hover {
     background: #95a5a6;
 }
+
+/* 進捗表示 */
+.progress-section {
+    margin: 15px 0;
+    padding: 15px;
+    background-color: #f8f9fa;
+    border-radius: 6px;
+    border: 1px solid #e9ecef;
+}
+
+.progress-info {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+    font-size: 14px;
+    color: #495057;
+}
+
+.progress-bar {
+    width: 100%;
+    height: 20px;
+    background-color: #e9ecef;
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #3498db, #2ecc71);
+    width: 0%;
+    transition: width 0.3s ease;
+    border-radius: 10px;
+}
+
+/* ページ管理コントロール */
+.page-management {
+    margin: 20px 0;
+    padding: 15px;
+    background-color: #f8f9fa;
+    border-radius: 6px;
+    border: 1px solid #e9ecef;
+}
+
+.filter-controls {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 15px;
+    align-items: center;
+}
+
+#keywordFilter {
+    flex: 1;
+    padding: 10px;
+    border: 2px solid #ddd;
+    border-radius: 6px;
+    font-size: 14px;
+}
+
+#keywordFilter:focus {
+    outline: none;
+    border-color: #3498db;
+}
+
+.filter-controls button {
+    padding: 10px 15px;
+    font-size: 14px;
+    min-width: 80px;
+}
+
+.selection-controls {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.selection-controls label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: bold;
+    color: #495057;
+    cursor: pointer;
+}
+
+.selection-controls input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+}
+
+.delete-button {
+    background-color: #e74c3c;
+    color: white;
+}
+
+.delete-button:hover:not(:disabled) {
+    background-color: #c0392b;
+}
+
+.delete-button:disabled {
+    background-color: #bdc3c7;
+    cursor: not-allowed;
+}
+
+/* ページアイテムのチェックボックス */
+.page-item {
+    padding: 12px 15px;
+    border-bottom: 1px solid #e9ecef;
+    transition: background-color 0.2s ease;
+    display: flex;
+    align-items: center;
+}
+
+.page-checkbox {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    cursor: pointer;
+}
+
+.page-checkbox input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+    margin: 0;
+    flex-shrink: 0;
+}
+
+.page-checkbox a {
+    color: #3498db;
+    text-decoration: none;
+    font-size: 0.95em;
+    word-break: break-all;
+    flex: 1;
+}
+
+.page-checkbox a:hover {
+    text-decoration: underline;
+}
+
+.page-item:hover {
+    background-color: #f8f9fa;
+}
+
+/* レスポンシブ対応の追加 */
+@media (max-width: 768px) {
+    .filter-controls {
+        flex-direction: column;
+        gap: 10px;
+    }
+    
+    .filter-controls button {
+        width: 100%;
+    }
+    
+    .selection-controls {
+        flex-direction: column;
+        gap: 15px;
+        align-items: stretch;
+    }
+    
+    .delete-button {
+        width: 100%;
+    }
+    
+    .progress-info {
+        flex-direction: column;
+        gap: 5px;
+        text-align: center;
+    }
+}

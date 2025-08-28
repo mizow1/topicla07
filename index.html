@@ -33,6 +33,26 @@
                 <button id="scrapeButton">全ページ取得</button>
                 <span id="selectedSite"></span>
             </div>
+            <div id="progressSection" class="progress-section" style="display: none;">
+                <div class="progress-info">
+                    <span id="progressText">準備中...</span>
+                    <span id="progressCount">0/0</span>
+                </div>
+                <div class="progress-bar">
+                    <div id="progressFill" class="progress-fill"></div>
+                </div>
+            </div>
+            <div class="page-management">
+                <div class="filter-controls">
+                    <input type="text" id="keywordFilter" placeholder="キーワードでフィルタ">
+                    <button id="filterButton">フィルタ</button>
+                    <button id="clearFilterButton">クリア</button>
+                </div>
+                <div class="selection-controls">
+                    <label><input type="checkbox" id="selectAllCheckbox"> 全選択</label>
+                    <button id="deleteSelectedButton" class="delete-button" disabled>選択したURLを削除</button>
+                </div>
+            </div>
             <div id="pagesList" class="pages-list"></div>
             <div id="scrapeResult" class="message"></div>
         </div>
@@ -41,6 +61,9 @@
     <script>
         let currentSiteId = null;
         let currentSiteDomain = null;
+        let allPages = [];
+        let filteredPages = [];
+        let isScrapingInProgress = false;
 
         // サイト登録フォーム
         document.getElementById('addSiteForm').addEventListener('submit', function(e) {
@@ -155,59 +178,265 @@
         function displayPages(pages) {
             const pagesList = document.getElementById('pagesList');
             pagesList.innerHTML = '';
+            
+            allPages = pages;
+            filteredPages = pages;
 
             if (pages.length === 0) {
                 pagesList.innerHTML = '<p>ページが見つかりません。「全ページ取得」ボタンをクリックしてください。</p>';
                 return;
             }
 
-            pages.forEach(page => {
+            renderPagesList(pages);
+        }
+        
+        // ページリストのレンダリング
+        function renderPagesList(pages) {
+            const pagesList = document.getElementById('pagesList');
+            pagesList.innerHTML = '';
+            
+            if (pages.length === 0) {
+                pagesList.innerHTML = '<p>該当するページが見つかりません。</p>';
+                return;
+            }
+
+            pages.forEach((page, index) => {
                 const pageDiv = document.createElement('div');
                 pageDiv.className = 'page-item';
-                pageDiv.innerHTML = `<a href="${page.url}" target="_blank">${page.url}</a>`;
+                pageDiv.innerHTML = `
+                    <label class="page-checkbox">
+                        <input type="checkbox" value="${page.url}" data-index="${index}">
+                        <a href="${page.url}" target="_blank">${page.url}</a>
+                    </label>
+                `;
                 pagesList.appendChild(pageDiv);
             });
+            
+            updateSelectAllCheckbox();
         }
 
-        // スクレイピング実行
+        // スクレイピング実行（進捗表示付き）
         document.getElementById('scrapeButton').addEventListener('click', function() {
             if (!currentSiteId) {
                 alert('サイトを選択してください');
                 return;
             }
+            
+            if (isScrapingInProgress) {
+                alert('現在取得中です。しばらくお待ちください。');
+                return;
+            }
 
             const button = this;
             const resultDiv = document.getElementById('scrapeResult');
+            const progressSection = document.getElementById('progressSection');
+            const progressText = document.getElementById('progressText');
+            const progressCount = document.getElementById('progressCount');
+            const progressFill = document.getElementById('progressFill');
             
+            isScrapingInProgress = true;
             button.disabled = true;
             button.textContent = '取得中...';
             resultDiv.textContent = '';
+            progressSection.style.display = 'block';
+            progressText.textContent = 'URL取得を開始中...';
+            progressCount.textContent = '0/0';
+            progressFill.style.width = '0%';
 
-            fetch('scrape_pages.php', {
+            fetch('scrape_progress.php', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/x-www-form-urlencoded',
                 },
                 body: 'site_id=' + currentSiteId
             })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    resultDiv.className = 'message success';
-                    resultDiv.textContent = data.message;
-                    loadPages(currentSiteId); // ページ一覧を更新
-                } else {
-                    resultDiv.className = 'message error';
-                    resultDiv.textContent = data.message;
+            .then(response => {
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                let buffer = '';
+                
+                function readStream() {
+                    return reader.read().then(({ done, value }) => {
+                        if (done) {
+                            return;
+                        }
+                        
+                        buffer += decoder.decode(value, { stream: true });
+                        const lines = buffer.split('\n');
+                        buffer = lines.pop();
+                        
+                        lines.forEach(line => {
+                            if (line.trim()) {
+                                try {
+                                    const data = JSON.parse(line);
+                                    handleProgressUpdate(data);
+                                } catch (e) {
+                                    console.error('JSONパースエラー:', e, line);
+                                }
+                            }
+                        });
+                        
+                        return readStream();
+                    });
                 }
+                
+                return readStream();
             })
             .catch(error => {
                 resultDiv.className = 'message error';
                 resultDiv.textContent = 'エラーが発生しました: ' + error;
             })
             .finally(() => {
+                isScrapingInProgress = false;
                 button.disabled = false;
                 button.textContent = '全ページ取得';
+                progressSection.style.display = 'none';
+            });
+        });
+        
+        // 進捗更新処理
+        function handleProgressUpdate(data) {
+            const progressText = document.getElementById('progressText');
+            const progressCount = document.getElementById('progressCount');
+            const progressFill = document.getElementById('progressFill');
+            const resultDiv = document.getElementById('scrapeResult');
+            
+            switch(data.type) {
+                case 'start':
+                    progressText.textContent = 'URL取得中...';
+                    break;
+                case 'progress':
+                    const percentage = Math.round((data.processed / data.total) * 100);
+                    progressText.textContent = `URL取得中... (${data.currentUrl})`;
+                    progressCount.textContent = `${data.processed}/${data.total}`;
+                    progressFill.style.width = `${percentage}%`;
+                    // リアルタイムでページリストを更新
+                    loadPages(currentSiteId);
+                    break;
+                case 'complete':
+                    progressText.textContent = '完了';
+                    progressFill.style.width = '100%';
+                    resultDiv.className = 'message success';
+                    resultDiv.textContent = data.message;
+                    loadPages(currentSiteId);
+                    break;
+                case 'error':
+                    resultDiv.className = 'message error';
+                    resultDiv.textContent = data.message;
+                    break;
+            }
+        }
+        
+        // キーワードフィルタ
+        document.getElementById('filterButton').addEventListener('click', function() {
+            const keyword = document.getElementById('keywordFilter').value.toLowerCase();
+            if (keyword.trim() === '') {
+                filteredPages = allPages;
+            } else {
+                filteredPages = allPages.filter(page => page.url.toLowerCase().includes(keyword));
+            }
+            renderPagesList(filteredPages);
+        });
+        
+        // フィルタクリア
+        document.getElementById('clearFilterButton').addEventListener('click', function() {
+            document.getElementById('keywordFilter').value = '';
+            filteredPages = allPages;
+            renderPagesList(filteredPages);
+        });
+        
+        // Enterキーでフィルタ
+        document.getElementById('keywordFilter').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                document.getElementById('filterButton').click();
+            }
+        });
+        
+        // 全選択チェックボックス
+        document.getElementById('selectAllCheckbox').addEventListener('change', function() {
+            const checkboxes = document.querySelectorAll('#pagesList input[type="checkbox"]');
+            checkboxes.forEach(checkbox => {
+                checkbox.checked = this.checked;
+            });
+            updateDeleteButton();
+        });
+        
+        // 個別チェックボックスの変更を監視
+        document.addEventListener('change', function(e) {
+            if (e.target.matches('#pagesList input[type="checkbox"]')) {
+                updateSelectAllCheckbox();
+                updateDeleteButton();
+            }
+        });
+        
+        // 全選択チェックボックスの状態更新
+        function updateSelectAllCheckbox() {
+            const allCheckboxes = document.querySelectorAll('#pagesList input[type="checkbox"]');
+            const checkedCheckboxes = document.querySelectorAll('#pagesList input[type="checkbox"]:checked');
+            const selectAllCheckbox = document.getElementById('selectAllCheckbox');
+            
+            if (allCheckboxes.length === 0) {
+                selectAllCheckbox.checked = false;
+                selectAllCheckbox.indeterminate = false;
+            } else if (checkedCheckboxes.length === allCheckboxes.length) {
+                selectAllCheckbox.checked = true;
+                selectAllCheckbox.indeterminate = false;
+            } else if (checkedCheckboxes.length > 0) {
+                selectAllCheckbox.checked = false;
+                selectAllCheckbox.indeterminate = true;
+            } else {
+                selectAllCheckbox.checked = false;
+                selectAllCheckbox.indeterminate = false;
+            }
+        }
+        
+        // 削除ボタンの状態更新
+        function updateDeleteButton() {
+            const checkedCheckboxes = document.querySelectorAll('#pagesList input[type="checkbox"]:checked');
+            const deleteButton = document.getElementById('deleteSelectedButton');
+            deleteButton.disabled = checkedCheckboxes.length === 0;
+        }
+        
+        // 選択したURL削除
+        document.getElementById('deleteSelectedButton').addEventListener('click', function() {
+            const checkedCheckboxes = document.querySelectorAll('#pagesList input[type="checkbox"]:checked');
+            if (checkedCheckboxes.length === 0) {
+                alert('削除するURLを選択してください');
+                return;
+            }
+            
+            if (!confirm(`${checkedCheckboxes.length}個のURLを削除しますか？`)) {
+                return;
+            }
+            
+            const urlsToDelete = Array.from(checkedCheckboxes).map(cb => cb.value);
+            
+            fetch('delete_pages.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    urls: urlsToDelete,
+                    site_id: currentSiteId
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                const resultDiv = document.getElementById('scrapeResult');
+                if (data.success) {
+                    resultDiv.className = 'message success';
+                    resultDiv.textContent = data.message;
+                    loadPages(currentSiteId);
+                } else {
+                    resultDiv.className = 'message error';
+                    resultDiv.textContent = data.message;
+                }
+            })
+            .catch(error => {
+                const resultDiv = document.getElementById('scrapeResult');
+                resultDiv.className = 'message error';
+                resultDiv.textContent = 'エラーが発生しました: ' + error;
             });
         });
 
