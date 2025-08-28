@@ -411,3 +411,233 @@ button:disabled {
         text-align: center;
     }
 }
+
+/* 分析機能のスタイル */
+.page-actions {
+    margin-left: auto;
+    flex-shrink: 0;
+}
+
+.analyze-btn {
+    background-color: #9b59b6;
+    color: white;
+    padding: 6px 12px;
+    font-size: 12px;
+    border-radius: 4px;
+    border: none;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+.analyze-btn:hover {
+    background-color: #8e44ad;
+}
+
+/* 分析結果セクション */
+.analysis-url {
+    font-weight: bold;
+    color: #2c3e50;
+    margin-bottom: 20px;
+    padding: 10px;
+    background-color: #ecf0f1;
+    border-radius: 6px;
+}
+
+.analysis-loading {
+    text-align: center;
+    padding: 20px;
+    font-size: 16px;
+    color: #7f8c8d;
+}
+
+.seo-improvements, .topic-cluster {
+    margin-bottom: 30px;
+}
+
+.improvement-item, .cluster-item {
+    background-color: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: 6px;
+    padding: 20px;
+    margin-bottom: 15px;
+}
+
+.improvement-item h4, .cluster-item h4 {
+    color: #2c3e50;
+    margin-bottom: 10px;
+    font-size: 1.1em;
+}
+
+.improvement-item p, .cluster-item p {
+    color: #495057;
+    margin-bottom: 15px;
+    line-height: 1.5;
+}
+
+.execute-btn {
+    background-color: #27ae60;
+    color: white;
+    padding: 8px 16px;
+    font-size: 14px;
+    border-radius: 4px;
+    border: none;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+.execute-btn:hover {
+    background-color: #219a52;
+}
+
+.execute-btn:disabled {
+    background-color: #95a5a6;
+    cursor: not-allowed;
+}
+
+/* 実行結果表示 */
+.execution-result, .cluster-result {
+    margin-top: 20px;
+    padding: 15px;
+    background-color: #e8f5e8;
+    border: 1px solid #c3e6cb;
+    border-radius: 6px;
+}
+
+.execution-result h5, .cluster-result h4 {
+    color: #155724;
+    margin-bottom: 10px;
+}
+
+.result-content {
+    color: #495057;
+    font-size: 14px;
+}
+
+/* クラスター構成表示 */
+.cluster-structure {
+    background-color: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: 6px;
+    padding: 20px;
+    margin-top: 15px;
+}
+
+.structure-content p {
+    margin-bottom: 10px;
+    color: #495057;
+}
+
+.structure-content strong {
+    color: #2c3e50;
+}
+
+.headings {
+    margin: 15px 0;
+    padding: 10px;
+    background-color: #ffffff;
+    border-radius: 4px;
+    border: 1px solid #e9ecef;
+}
+
+.headings h5 {
+    color: #2c3e50;
+    margin-bottom: 10px;
+    font-size: 14px;
+}
+
+.headings p {
+    margin-bottom: 5px;
+    padding: 5px 10px;
+    background-color: #f8f9fa;
+    border-radius: 3px;
+    font-size: 13px;
+    color: #495057;
+}
+
+.create-content-btn {
+    background-color: #e67e22;
+    color: white;
+    margin-top: 15px;
+}
+
+.create-content-btn:hover {
+    background-color: #d68910;
+}
+
+/* 本文作成結果 */
+.content-result {
+    margin-top: 20px;
+    padding: 15px;
+    background-color: #fff3cd;
+    border: 1px solid #ffeaa7;
+    border-radius: 6px;
+}
+
+.content-result h5 {
+    color: #856404;
+    margin-bottom: 15px;
+}
+
+.content-textarea {
+    width: 100%;
+    min-height: 300px;
+    padding: 15px;
+    border: 1px solid #e9ecef;
+    border-radius: 6px;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 13px;
+    line-height: 1.4;
+    resize: vertical;
+    background-color: #ffffff;
+    color: #2c3e50;
+}
+
+.copy-btn {
+    background-color: #17a2b8;
+    color: white;
+    margin-top: 10px;
+    padding: 6px 12px;
+    font-size: 12px;
+}
+
+.copy-btn:hover {
+    background-color: #138496;
+}
+
+.error {
+    background-color: #f8d7da;
+    color: #721c24;
+    padding: 15px;
+    border: 1px solid #f5c6cb;
+    border-radius: 6px;
+}
+
+/* レスポンシブ対応の追加 */
+@media (max-width: 768px) {
+    .page-item {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+    }
+    
+    .page-actions {
+        margin-left: 0;
+        align-self: stretch;
+    }
+    
+    .analyze-btn {
+        width: 100%;
+    }
+    
+    .improvement-item, .cluster-item {
+        padding: 15px;
+    }
+    
+    .content-textarea {
+        font-size: 12px;
+    }
+    
+    .structure-content {
+        font-size: 14px;
+    }
+}

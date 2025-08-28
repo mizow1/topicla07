@@ -56,6 +56,23 @@
             <div id="pagesList" class="pages-list"></div>
             <div id="scrapeResult" class="message"></div>
         </div>
+
+        <!-- SEO分析結果セクション -->
+        <div class="section" id="analysisSection" style="display: none;">
+            <h2>SEO分析結果</h2>
+            <div id="analysisUrl" class="analysis-url"></div>
+            <div id="analysisResult" class="analysis-result">
+                <div class="analysis-loading" id="analysisLoading">分析中...</div>
+                <div class="seo-improvements" id="seoImprovements" style="display: none;">
+                    <h3>SEO改善提案</h3>
+                    <div id="improvementsList"></div>
+                </div>
+                <div class="topic-cluster" id="topicCluster" style="display: none;">
+                    <h3>トピッククラスター理論による改善案</h3>
+                    <div id="clusterSuggestions"></div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script>
@@ -208,6 +225,9 @@
                         <input type="checkbox" value="${page.url}" data-index="${index}">
                         <a href="${page.url}" target="_blank">${page.url}</a>
                     </label>
+                    <div class="page-actions">
+                        <button class="analyze-btn" onclick="analyzePage('${page.url}', ${index})">分析</button>
+                    </div>
                 `;
                 pagesList.appendChild(pageDiv);
             });
@@ -439,6 +459,279 @@
                 resultDiv.textContent = 'エラーが発生しました: ' + error;
             });
         });
+
+        // ページ分析機能
+        function analyzePage(url, index) {
+            const analysisSection = document.getElementById('analysisSection');
+            const analysisUrl = document.getElementById('analysisUrl');
+            const analysisLoading = document.getElementById('analysisLoading');
+            const seoImprovements = document.getElementById('seoImprovements');
+            const topicCluster = document.getElementById('topicCluster');
+            
+            // 分析セクションを表示
+            analysisSection.style.display = 'block';
+            analysisUrl.textContent = '分析対象: ' + url;
+            analysisLoading.style.display = 'block';
+            seoImprovements.style.display = 'none';
+            topicCluster.style.display = 'none';
+            
+            // スクロールして分析セクションを表示
+            analysisSection.scrollIntoView({ behavior: 'smooth' });
+            
+            // SEO分析を実行
+            fetch('seo_analysis.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: 'url=' + encodeURIComponent(url)
+            })
+            .then(response => response.json())
+            .then(data => {
+                analysisLoading.style.display = 'none';
+                
+                if (data.success) {
+                    displaySEOImprovements(data.improvements, data.debug, data.geminiRaw);
+                    displayTopicClusterSuggestions(data.clusterSuggestions);
+                } else {
+                    const improvementsList = document.getElementById('improvementsList');
+                    improvementsList.innerHTML = '<div class="error">分析エラー: ' + data.message + '</div>';
+                    seoImprovements.style.display = 'block';
+                }
+            })
+            .catch(error => {
+                analysisLoading.style.display = 'none';
+                const improvementsList = document.getElementById('improvementsList');
+                improvementsList.innerHTML = '<div class="error">分析中にエラーが発生しました: ' + error + '</div>';
+                seoImprovements.style.display = 'block';
+            });
+        }
+        
+        // SEO改善提案の表示
+        function displaySEOImprovements(improvements, debug, geminiRaw) {
+            const improvementsList = document.getElementById('improvementsList');
+            const seoImprovements = document.getElementById('seoImprovements');
+            
+            let html = '';
+            
+            // デバッグ情報を表示（開発者向け）
+            if (debug) {
+                html += `
+                    <div class="debug-info" style="background: #f0f0f0; padding: 10px; margin-bottom: 15px; border-radius: 5px; font-size: 12px;">
+                        <strong>🔍 分析状況:</strong><br>
+                        Gemini API呼び出し: ${debug.geminiCalled ? '✅' : '❌'}<br>
+                        改善提案取得: ${debug.geminiHasImprovements ? '✅' : '❌'}<br>
+                        提案数: ${debug.improvementsCount}個<br>
+                        ${debug.geminiError ? 'エラー: ' + debug.geminiError + '<br>' : ''}
+                        ${geminiRaw ? '<details><summary>AI応答の一部 (クリックで展開)</summary><pre style="white-space: pre-wrap; font-size: 11px;">' + geminiRaw + '</pre></details>' : ''}
+                    </div>
+                `;
+            }
+            
+            if (improvements && improvements.length > 0) {
+                improvements.forEach((improvement, index) => {
+                    const typeLabel = improvement.type === 'ai-generated' ? '🤖 AI分析' : 
+                                     improvement.type === 'debug' ? '🔧 デバッグ' : 
+                                     improvement.type === 'fallback' ? '⚠️ フォールバック' : '📋 基本分析';
+                    
+                    html += `
+                        <div class="improvement-item">
+                            <h4>${typeLabel}: ${improvement.title}</h4>
+                            <p>${improvement.description}</p>
+                            <button class="execute-btn" onclick="executeImprovement(${index}, '${improvement.type}')">実行</button>
+                        </div>
+                    `;
+                });
+            } else {
+                html += `
+                    <div class="error">
+                        改善提案を取得できませんでした。デバッグ情報を確認してください。
+                    </div>
+                `;
+            }
+            
+            improvementsList.innerHTML = html;
+            seoImprovements.style.display = 'block';
+        }
+        
+        // トピッククラスター提案の表示
+        function displayTopicClusterSuggestions(suggestions) {
+            const clusterSuggestions = document.getElementById('clusterSuggestions');
+            const topicCluster = document.getElementById('topicCluster');
+            
+            let html = `
+                <div class="cluster-item">
+                    <h4>トピッククラスター構成提案</h4>
+                    <p>${suggestions.description}</p>
+                    <button class="execute-btn" onclick="executeClusterImprovement()">実行</button>
+                </div>
+            `;
+            
+            clusterSuggestions.innerHTML = html;
+            topicCluster.style.display = 'block';
+        }
+        
+        // 改善案の実行
+        function executeImprovement(index, type) {
+            const button = event.target;
+            button.disabled = true;
+            button.textContent = '実行中...';
+            
+            const analysisUrl = document.getElementById('analysisUrl').textContent.replace('分析対象: ', '');
+            
+            fetch('execute_improvement.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    url: analysisUrl,
+                    index: index,
+                    type: type
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                button.disabled = false;
+                button.textContent = '実行';
+                
+                if (data.success) {
+                    displayExecutionResult(data.result, button.parentElement);
+                } else {
+                    alert('実行エラー: ' + data.message);
+                }
+            })
+            .catch(error => {
+                button.disabled = false;
+                button.textContent = '実行';
+                alert('実行中にエラーが発生しました: ' + error);
+            });
+        }
+        
+        // トピッククラスター改善の実行
+        function executeClusterImprovement() {
+            const button = event.target;
+            button.disabled = true;
+            button.textContent = '実行中...';
+            
+            const analysisUrl = document.getElementById('analysisUrl').textContent.replace('分析対象: ', '');
+            
+            fetch('execute_cluster.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: 'url=' + encodeURIComponent(analysisUrl)
+            })
+            .then(response => response.json())
+            .then(data => {
+                button.disabled = false;
+                button.textContent = '実行';
+                
+                if (data.success) {
+                    displayClusterResult(data.result);
+                } else {
+                    alert('実行エラー: ' + data.message);
+                }
+            })
+            .catch(error => {
+                button.disabled = false;
+                button.textContent = '実行';
+                alert('実行中にエラーが発生しました: ' + error);
+            });
+        }
+        
+        // 実行結果の表示
+        function displayExecutionResult(result, parentElement) {
+            const resultDiv = document.createElement('div');
+            resultDiv.className = 'execution-result';
+            resultDiv.innerHTML = `
+                <h5>改善結果:</h5>
+                <div class="result-content">${result}</div>
+            `;
+            parentElement.appendChild(resultDiv);
+        }
+        
+        // クラスター結果の表示
+        function displayClusterResult(result) {
+            const clusterSuggestions = document.getElementById('clusterSuggestions');
+            
+            const resultDiv = document.createElement('div');
+            resultDiv.className = 'cluster-result';
+            resultDiv.innerHTML = `
+                <div class="cluster-structure">
+                    <h4>構成提案:</h4>
+                    <div class="structure-content">
+                        <p><strong>タイトル:</strong> ${result.title}</p>
+                        <p><strong>メタディスクリプション:</strong> ${result.metaDescription}</p>
+                        <div class="headings">
+                            <h5>見出し構成:</h5>
+                            ${result.headings.map(h => `<p>${h}</p>`).join('')}
+                        </div>
+                        <button class="create-content-btn" onclick="createContent('${encodeURIComponent(JSON.stringify(result))}')">本文作成</button>
+                    </div>
+                </div>
+            `;
+            clusterSuggestions.appendChild(resultDiv);
+        }
+        
+        // 本文作成
+        function createContent(encodedResult) {
+            const button = event.target;
+            button.disabled = true;
+            button.textContent = '作成中...';
+            
+            const result = JSON.parse(decodeURIComponent(encodedResult));
+            
+            fetch('create_content.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(result)
+            })
+            .then(response => response.json())
+            .then(data => {
+                button.disabled = false;
+                button.textContent = '本文作成';
+                
+                if (data.success) {
+                    displayContentResult(data.content, button.parentElement);
+                } else {
+                    alert('作成エラー: ' + data.message);
+                }
+            })
+            .catch(error => {
+                button.disabled = false;
+                button.textContent = '本文作成';
+                alert('作成中にエラーが発生しました: ' + error);
+            });
+        }
+        
+        // 本文作成結果の表示
+        function displayContentResult(content, parentElement) {
+            const contentDiv = document.createElement('div');
+            contentDiv.className = 'content-result';
+            contentDiv.innerHTML = `
+                <h5>作成された本文（マークダウン形式）:</h5>
+                <textarea class="content-textarea" readonly>${content}</textarea>
+                <button class="copy-btn" onclick="copyToClipboard(this.previousElementSibling)">コピー</button>
+            `;
+            parentElement.appendChild(contentDiv);
+        }
+        
+        // クリップボードにコピー
+        function copyToClipboard(textarea) {
+            textarea.select();
+            document.execCommand('copy');
+            
+            const button = event.target;
+            const originalText = button.textContent;
+            button.textContent = 'コピー済み';
+            setTimeout(() => {
+                button.textContent = originalText;
+            }, 2000);
+        }
 
         // ページロード時にサイト一覧を読み込み
         document.addEventListener('DOMContentLoaded', function() {
