@@ -311,39 +311,56 @@ function analyzeWithGemini($html, $url, $apiKey) {
 {$text}
 
 【分析要求】
-このページの実際の内容を読んで、以下の観点から具体的に分析してください：
+このページの実際の内容を読んで、具体的な問題点を実際のページから引用して指摘してください：
 
-1. **現在のタイトルとメタディスクリプション**を見て、実際の改善案を提示
-2. **実際の見出し構造**を分析し、具体的な修正点を指摘
-3. **ページの実際のテーマと内容**に基づくキーワード戦略
-4. **このページの実際の価値**と不足している情報の特定
-5. **競合との差別化**のための具体的な改善点
+1. **現在のタイトル**を確認し、実際の文言を引用して具体的な問題点を指摘
+2. **現在のメタディスクリプション**の実際の内容を引用し、改善すべき点を特定
+3. **実際の見出し構造（H1, H2, H3等）**を分析し、現在使用されている見出しテキストを引用して構造的問題を指摘
+4. **実際のページ内容**から具体的な文章やフレーズを引用し、内容の問題点を特定
+5. **実際に不足している情報**を現在の内容と比較して明確に指摘
+6. **現在使用されているキーワード**を実際のテキストから抽出し、キーワード戦略の問題点を指摘
+
+【重要】必ず現在のページの実際の内容を引用して問題点を指摘してください。一般論ではなく、このページの具体的な現状に基づいた分析をお願いします。
 
 【出力形式】
-以下のJSON形式で、実際のページ内容に基づいた具体的な分析結果を返してください：
+以下のJSON形式で、実際のページ内容を引用した具体的な分析結果を返してください：
 
 {
   \"currentTitle\": \"現在のタイトル（実際のもの）\",
   \"currentMeta\": \"現在のメタディスクリプション（実際のもの）\",
-  \"improvedTitle\": \"具体的な改善タイトル案\",
-  \"improvedMeta\": \"具体的な改善メタディスクリプション案\",
-  \"contentQuality\": \"このページの実際の内容品質評価\",
-  \"specificIssues\": [\"このページの具体的な問題点1\", \"問題点2\"],
+  \"currentHeadings\": [\"実際のH1タグ\", \"実際のH2タグ1\", \"実際のH2タグ2\"],
+  \"specificProblemsWithQuotes\": [
+    {
+      \"issue\": \"問題の種類（例：タイトルが短すぎる）\",
+      \"currentContent\": \"『実際のページから引用した該当箇所』\",
+      \"problem\": \"この内容の具体的な問題点の説明\",
+      \"improvement\": \"具体的な改善案\"
+    }
+  ],
+  \"contentAnalysis\": {
+    \"missingElements\": [\"実際に不足している具体的な情報\"],
+    \"weakContent\": [\"内容が薄い箇所の実際の引用\"],
+    \"keywordIssues\": [\"現在使用されているキーワードとその問題点\"]
+  },
   \"improvements\": [
     {
       \"title\": \"具体的な改善項目\",
+      \"currentIssue\": \"現在のページの実際の問題（引用付き）\",
       \"description\": \"このページの実際の内容に基づく詳細な改善方法\",
+      \"beforeExample\": \"改善前：『実際の現在の内容』\",
+      \"afterExample\": \"改善後：『具体的な改善案』\",
       \"priority\": \"high/medium/low\",
       \"expectedResult\": \"この改善による期待される効果\"
     }
   ],
-  \"missingContent\": [\"このページに不足している情報\"],
+  \"improvedTitle\": \"現在のタイトルを改善した具体的な案\",
+  \"improvedMeta\": \"現在のメタディスクリプションを改善した具体的な案\",
   \"mainKeywords\": [\"このページの実際のキーワード\"],
   \"eatScore\": 7,
-  \"eatAnalysis\": \"E-A-Tの具体的な評価理由\"
+  \"eatAnalysis\": \"E-A-Tの具体的な評価理由（実際の内容を根拠に）\"
 }
 
-必ず実際のページ内容を読んで、そのページに特化した具体的な分析と改善提案をしてください。一般論ではなく、このページの実際の状況に基づいた提案をお願いします。";
+必ず実際のページから具体的な内容を引用し、現状の問題点を明確に指摘してから改善提案をしてください。";
     
     $data = [
         'contents' => [
@@ -538,21 +555,49 @@ function performBasicAnalysis($dom, $xpath, $html) {
 function generateAIOnlyImprovements($geminiAnalysis) {
     $improvements = [];
     
-    // 強制的にAI分析結果のみを使用
+    // 新しいフォーマットに対応した改善提案の処理
     if ($geminiAnalysis && isset($geminiAnalysis['improvements']) && is_array($geminiAnalysis['improvements'])) {
         foreach ($geminiAnalysis['improvements'] as $geminiImprovement) {
+            $description = $geminiImprovement['description'] ?? '';
+            
+            // 現在の問題点（引用付き）を追加
+            if (isset($geminiImprovement['currentIssue'])) {
+                $description = "【現在の問題】" . $geminiImprovement['currentIssue'] . "\n\n" . $description;
+            }
+            
+            // Before/After例を追加
+            if (isset($geminiImprovement['beforeExample']) && isset($geminiImprovement['afterExample'])) {
+                $description .= "\n\n" . $geminiImprovement['beforeExample'] . "\n" . $geminiImprovement['afterExample'];
+            }
+            
             $improvements[] = [
                 'type' => 'ai-generated',
                 'title' => $geminiImprovement['title'] ?? 'AI改善提案',
-                'description' => $geminiImprovement['description'] ?? '',
-                'priority' => $geminiImprovement['priority'] ?? 'medium'
+                'description' => $description,
+                'priority' => $geminiImprovement['priority'] ?? 'medium',
+                'expectedResult' => $geminiImprovement['expectedResult'] ?? ''
             ];
         }
-        
-        // AI提案があった場合は絶対に定型文を使用しない
-        if (!empty($improvements)) {
-            return $improvements;
+    }
+    
+    // 具体的な問題点を別の改善項目として追加
+    if ($geminiAnalysis && isset($geminiAnalysis['specificProblemsWithQuotes']) && is_array($geminiAnalysis['specificProblemsWithQuotes'])) {
+        foreach ($geminiAnalysis['specificProblemsWithQuotes'] as $problem) {
+            $improvements[] = [
+                'type' => 'specific-issue',
+                'title' => '🔍 ' . ($problem['issue'] ?? '具体的な問題点'),
+                'description' => "【現在の内容】" . ($problem['currentContent'] ?? '') . 
+                               "\n\n【問題点】" . ($problem['problem'] ?? '') .
+                               "\n\n【改善案】" . ($problem['improvement'] ?? ''),
+                'priority' => 'high',
+                'expectedResult' => 'ページの具体的な問題解決'
+            ];
         }
+    }
+    
+    // 強制的にAI分析結果のみを使用
+    if (!empty($improvements)) {
+        return $improvements;
     }
     
     // AI分析が完全に失敗した場合のみ詳細デバッグ
