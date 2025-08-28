@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>サイト管理システム</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>サイト管理システム</h1>
+        
+        <!-- サイト登録セクション -->
+        <div class="section">
+            <h2>新しいサイトを登録</h2>
+            <form id="addSiteForm">
+                <input type="text" id="urlInput" placeholder="URLを入力してください" required>
+                <button type="submit">サイト登録</button>
+            </form>
+            <div id="addResult" class="message"></div>
+        </div>
+        
+        <!-- サイト選択セクション -->
+        <div class="section">
+            <h2>登録済みサイト</h2>
+            <div id="sitesList" class="sites-list"></div>
+        </div>
+        
+        <!-- ページ一覧セクション -->
+        <div class="section" id="pagesSection" style="display: none;">
+            <h2>ページ一覧</h2>
+            <div class="page-controls">
+                <button id="scrapeButton">全ページ取得</button>
+                <span id="selectedSite"></span>
+            </div>
+            <div id="pagesList" class="pages-list"></div>
+            <div id="scrapeResult" class="message"></div>
+        </div>
+    </div>
+
+    <script>
+        let currentSiteId = null;
+        let currentSiteDomain = null;
+
+        // サイト登録フォーム
+        document.getElementById('addSiteForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const url = document.getElementById('urlInput').value;
+            addSite(url);
+        });
+
+        // サイト登録
+        function addSite(url) {
+            const resultDiv = document.getElementById('addResult');
+            
+            fetch('add_site.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: 'url=' + encodeURIComponent(url)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    resultDiv.className = 'message success';
+                    resultDiv.textContent = data.message;
+                    document.getElementById('urlInput').value = '';
+                    loadSites(); // サイト一覧を更新
+                } else {
+                    resultDiv.className = 'message error';
+                    resultDiv.textContent = data.message;
+                }
+            })
+            .catch(error => {
+                resultDiv.className = 'message error';
+                resultDiv.textContent = 'エラーが発生しました: ' + error;
+            });
+        }
+
+        // サイト一覧読み込み
+        function loadSites() {
+            fetch('get_sites.php')
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    displaySites(data.sites);
+                } else {
+                    console.error('サイト一覧の取得に失敗しました:', data.message);
+                }
+            })
+            .catch(error => {
+                console.error('エラー:', error);
+            });
+        }
+
+        // サイト一覧表示
+        function displaySites(sites) {
+            const sitesList = document.getElementById('sitesList');
+            sitesList.innerHTML = '';
+
+            if (sites.length === 0) {
+                sitesList.innerHTML = '<p>登録されたサイトがありません。</p>';
+                return;
+            }
+
+            sites.forEach(site => {
+                const siteDiv = document.createElement('div');
+                siteDiv.className = 'site-item';
+                siteDiv.innerHTML = `
+                    <span class="domain">${site.domain}</span>
+                    <span class="date">${new Date(site.created_at).toLocaleString('ja-JP')}</span>
+                `;
+                siteDiv.addEventListener('click', () => selectSite(site.id, site.domain));
+                sitesList.appendChild(siteDiv);
+            });
+        }
+
+        // サイト選択
+        function selectSite(siteId, domain) {
+            currentSiteId = siteId;
+            currentSiteDomain = domain;
+            
+            // 選択状態を更新
+            document.querySelectorAll('.site-item').forEach(item => {
+                item.classList.remove('selected');
+            });
+            event.currentTarget.classList.add('selected');
+            
+            // ページセクションを表示
+            document.getElementById('pagesSection').style.display = 'block';
+            document.getElementById('selectedSite').textContent = '選択中: ' + domain;
+            
+            // ページ一覧を読み込み
+            loadPages(siteId);
+        }
+
+        // ページ一覧読み込み
+        function loadPages(siteId) {
+            fetch('get_pages.php?site_id=' + siteId)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    displayPages(data.pages);
+                } else {
+                    console.error('ページ一覧の取得に失敗しました:', data.message);
+                }
+            })
+            .catch(error => {
+                console.error('エラー:', error);
+            });
+        }
+
+        // ページ一覧表示
+        function displayPages(pages) {
+            const pagesList = document.getElementById('pagesList');
+            pagesList.innerHTML = '';
+
+            if (pages.length === 0) {
+                pagesList.innerHTML = '<p>ページが見つかりません。「全ページ取得」ボタンをクリックしてください。</p>';
+                return;
+            }
+
+            pages.forEach(page => {
+                const pageDiv = document.createElement('div');
+                pageDiv.className = 'page-item';
+                pageDiv.innerHTML = `<a href="${page.url}" target="_blank">${page.url}</a>`;
+                pagesList.appendChild(pageDiv);
+            });
+        }
+
+        // スクレイピング実行
+        document.getElementById('scrapeButton').addEventListener('click', function() {
+            if (!currentSiteId) {
+                alert('サイトを選択してください');
+                return;
+            }
+
+            const button = this;
+            const resultDiv = document.getElementById('scrapeResult');
+            
+            button.disabled = true;
+            button.textContent = '取得中...';
+            resultDiv.textContent = '';
+
+            fetch('scrape_pages.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: 'site_id=' + currentSiteId
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    resultDiv.className = 'message success';
+                    resultDiv.textContent = data.message;
+                    loadPages(currentSiteId); // ページ一覧を更新
+                } else {
+                    resultDiv.className = 'message error';
+                    resultDiv.textContent = data.message;
+                }
+            })
+            .catch(error => {
+                resultDiv.className = 'message error';
+                resultDiv.textContent = 'エラーが発生しました: ' + error;
+            })
+            .finally(() => {
+                button.disabled = false;
+                button.textContent = '全ページ取得';
+            });
+        });
+
+        // ページロード時にサイト一覧を読み込み
+        document.addEventListener('DOMContentLoaded', function() {
+            loadSites();
+        });
+    </script>
+</body>
+</html>
