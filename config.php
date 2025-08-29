@@ -3,9 +3,13 @@ $servername = "localhost";
 $username = "xs483187_ow";
 $password = "password";
 $dbname = "xs483187_topicla07";
-$gemini = $_ENV['GEMINI_API_KEY'] ?? '';
-$openai = $_ENV['OPENAI_API_KEY'] ?? '';
-$claude = $_ENV['CLAUDE_API_KEY'] ?? '';
+$gemini = getenv('GEMINI_API_KEY');
+$openai = getenv('OPENAI_API_KEY');
+$claude = getenv('CLAUDE_API_KEY');
+
+if (!$gemini || !$openai || !$claude) {
+    die("Error: API keys not found. Please set environment variables GEMINI_API_KEY, OPENAI_API_KEY, and CLAUDE_API_KEY");
+}
 
 
 try {
