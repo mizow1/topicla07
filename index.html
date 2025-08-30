@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>サイト管理システム</title>
     <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="multi_ai_styles.css">
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 </head>
 <body>
@@ -222,28 +223,71 @@
                 return;
             }
 
-            pages.forEach((page, index) => {
-                const pageDiv = document.createElement('div');
-                pageDiv.className = 'page-item';
-                
-                // 分析済みかどうかを確認してボタンテキストを決定
-                const isAnalyzed = analyzedPages.has(page.url);
-                const buttonText = isAnalyzed ? '再分析' : '分析';
-                const buttonClass = isAnalyzed ? 'reanalyze-btn' : 'analyze-btn';
-                
-                pageDiv.innerHTML = `
-                    <label class="page-checkbox">
-                        <input type="checkbox" value="${page.url}" data-index="${index}">
-                        <a href="${page.url}" target="_blank">${page.url}</a>
-                    </label>
-                    <div class="page-actions">
-                        <button class="${buttonClass}" id="btn-${index}" onclick="analyzePage('${page.url}', ${index}, ${isAnalyzed})">${buttonText}</button>
-                    </div>
-                `;
-                pagesList.appendChild(pageDiv);
+            // 各ページの分析結果存在確認を非同期で実行
+            const pagePromises = pages.map(async (page, index) => {
+                const hasAnalysis = await checkAnalysisExists(page.url);
+                return { page, index, hasAnalysis };
             });
-            
-            updateSelectAllCheckbox();
+
+            Promise.all(pagePromises).then(results => {
+                results.forEach(({ page, index, hasAnalysis }) => {
+                    const pageDiv = document.createElement('div');
+                    pageDiv.className = 'page-item';
+                    
+                    let buttonsHtml = '';
+                    if (hasAnalysis) {
+                        buttonsHtml = `
+                            <button class="show-results-btn" onclick="showAnalysisResults('${page.url}', ${index})">分析結果を表示</button>
+                            <button class="reanalyze-btn" onclick="reanalyzePageMultiAI('${page.url}', ${index})">再分析</button>
+                        `;
+                    } else {
+                        buttonsHtml = `<button class="analyze-btn" onclick="analyzePageMultiAI('${page.url}', ${index})">3AI分析実行</button>`;
+                    }
+                    
+                    pageDiv.innerHTML = `
+                        <label class="page-checkbox">
+                            <input type="checkbox" value="${page.url}" data-index="${index}">
+                            <a href="${page.url}" target="_blank">${page.url}</a>
+                        </label>
+                        <div class="page-actions">
+                            ${buttonsHtml}
+                        </div>
+                    `;
+                    pagesList.appendChild(pageDiv);
+                });
+                
+                updateSelectAllCheckbox();
+            });
+        }
+
+        // 分析結果が存在するかチェック
+        async function checkAnalysisExists(url) {
+            try {
+                const response = await fetch('check_analysis_results.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: 'url=' + encodeURIComponent(url)
+                });
+                
+                if (!response.ok) {
+                    console.warn(`HTTP Error ${response.status} for ${url}`);
+                    return false;
+                }
+                
+                const data = await response.json();
+                
+                // デバッグ情報があれば表示
+                if (data.debug) {
+                    console.warn('Database debug info:', data.debug);
+                }
+                
+                return data.success && data.hasAnalysis;
+            } catch (error) {
+                console.error('分析結果チェックエラー:', error);
+                return false;
+            }
         }
 
         // スクレイピング実行（進捗表示付き）
@@ -471,8 +515,18 @@
             });
         });
 
-        // ページ分析機能
-        function analyzePage(url, index, isReanalysis = false) {
+        // 新しい3AI分析機能
+        function analyzePageMultiAI(url, index) {
+            executeMultiAIAnalysis(url, index, false);
+        }
+
+        // 再分析機能
+        function reanalyzePageMultiAI(url, index) {
+            executeMultiAIAnalysis(url, index, true);
+        }
+
+        // 3AI分析実行
+        function executeMultiAIAnalysis(url, index, isReanalysis = false) {
             const analysisSection = document.getElementById('analysisSection');
             const analysisUrl = document.getElementById('analysisUrl');
             const analysisLoading = document.getElementById('analysisLoading');
@@ -483,7 +537,7 @@
             analysisSection.style.display = 'block';
             analysisUrl.textContent = '分析対象: ' + url;
             analysisLoading.style.display = 'block';
-            analysisLoading.textContent = isReanalysis ? '再分析中...' : '分析中...';
+            analysisLoading.textContent = isReanalysis ? '3AI再分析中...' : '3AI分析中...';
             seoImprovements.style.display = 'none';
             topicCluster.style.display = 'none';
             
@@ -497,8 +551,8 @@
                 formData.append('force_reanalyze', '1');
             }
             
-            // SEO分析を実行
-            fetch('seo_analysis.php', {
+            // 3AI分析を実行
+            fetch('multi_ai_analysis.php', {
                 method: 'POST',
                 body: formData
             })
@@ -507,26 +561,78 @@
                 analysisLoading.style.display = 'none';
                 
                 if (data.success) {
-                    // 分析済みとして記録
-                    analyzedPages.add(url);
-                    
-                    // ボタンを「再分析」に変更（キャッシュからの読み込み時も含む）
-                    updateAnalyzeButton(index, url);
-                    
-                    displaySEOImprovements(data.improvements, data.debug, data.geminiRaw);
-                    displayTopicClusterSuggestions(data.clusterSuggestions);
+                    displayMultiAIResults(data.multiAIResults, data.finalSuggestion, data.fromCache);
+                    // ページリストを更新してボタン表示を変更
+                    renderPagesList(filteredPages);
                 } else {
                     const improvementsList = document.getElementById('improvementsList');
-                    improvementsList.innerHTML = '<div class="error">分析エラー: ' + data.message + '</div>';
+                    improvementsList.innerHTML = '<div class="error">3AI分析エラー: ' + data.message + '</div>';
                     seoImprovements.style.display = 'block';
                 }
             })
             .catch(error => {
                 analysisLoading.style.display = 'none';
                 const improvementsList = document.getElementById('improvementsList');
-                improvementsList.innerHTML = '<div class="error">分析中にエラーが発生しました: ' + error + '</div>';
+                improvementsList.innerHTML = '<div class="error">3AI分析中にエラーが発生しました: ' + error + '</div>';
                 seoImprovements.style.display = 'block';
             });
+        }
+
+        // 既存の分析結果を表示
+        function showAnalysisResults(url, index) {
+            const analysisSection = document.getElementById('analysisSection');
+            const analysisUrl = document.getElementById('analysisUrl');
+            const analysisLoading = document.getElementById('analysisLoading');
+            const seoImprovements = document.getElementById('seoImprovements');
+            const topicCluster = document.getElementById('topicCluster');
+            
+            // 分析セクションを表示
+            analysisSection.style.display = 'block';
+            analysisUrl.textContent = '分析対象: ' + url;
+            analysisLoading.style.display = 'block';
+            analysisLoading.textContent = '既存分析結果を読み込み中...';
+            seoImprovements.style.display = 'none';
+            topicCluster.style.display = 'none';
+            
+            // スクロールして分析セクションを表示
+            analysisSection.scrollIntoView({ behavior: 'smooth' });
+            
+            // 既存の分析結果を取得
+            const formData = new FormData();
+            formData.append('url', url);
+            
+            fetch('get_analysis_results.php', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                analysisLoading.style.display = 'none';
+                
+                if (data.success) {
+                    displayMultiAIResults(data.multiAIResults, data.finalSuggestion, true);
+                } else {
+                    const improvementsList = document.getElementById('improvementsList');
+                    improvementsList.innerHTML = '<div class="error">分析結果の取得に失敗しました: ' + data.message + '</div>';
+                    seoImprovements.style.display = 'block';
+                }
+            })
+            .catch(error => {
+                analysisLoading.style.display = 'none';
+                const improvementsList = document.getElementById('improvementsList');
+                improvementsList.innerHTML = '<div class="error">分析結果の取得中にエラーが発生しました: ' + error + '</div>';
+                seoImprovements.style.display = 'block';
+            });
+        }
+
+        // 従来のページ分析機能（互換性維持）
+        function analyzePage(url, index, isReanalysis = false) {
+            // 新しい3AI分析にリダイレクト
+            if (isReanalysis) {
+                reanalyzePageMultiAI(url, index);
+            } else {
+                analyzePageMultiAI(url, index);
+            }
         }
         
         // 分析ボタンを「再分析」に更新
@@ -539,7 +645,199 @@
             }
         }
         
-        // SEO改善提案の表示
+        // 3AI分析結果を表示
+        function displayMultiAIResults(multiAIResults, finalSuggestion, fromCache = false) {
+            const improvementsList = document.getElementById('improvementsList');
+            const seoImprovements = document.getElementById('seoImprovements');
+            
+            let html = '';
+            
+            // キャッシュ情報
+            if (fromCache) {
+                html += `<div class="analysis-cache-info">💾 データベースから既存の分析結果を表示しています</div>`;
+            }
+            
+            // 3AI分析結果セクション
+            html += `<div class="multi-ai-analysis">`;
+            html += `<h3>🤖 3AI分析結果</h3>`;
+            html += `<div class="multi-ai-results">`;
+            
+            // Gemini結果
+            if (multiAIResults.gemini) {
+                html += createAIResultCard('gemini', 'Google Gemini', multiAIResults.gemini);
+            }
+            
+            // OpenAI結果
+            if (multiAIResults.openai) {
+                html += createAIResultCard('openai', 'OpenAI GPT-4', multiAIResults.openai);
+            }
+            
+            // Claude結果
+            if (multiAIResults.claude) {
+                html += createAIResultCard('claude', 'Anthropic Claude', multiAIResults.claude);
+            }
+            
+            html += `</div>`; // multi-ai-results終了
+            
+            // 最終統合提案セクション
+            if (finalSuggestion) {
+                html += createFinalSuggestionSection(finalSuggestion);
+            }
+            
+            html += `</div>`; // multi-ai-analysis終了
+            
+            improvementsList.innerHTML = html;
+            seoImprovements.style.display = 'block';
+        }
+
+        // AI結果カード作成
+        function createAIResultCard(aiType, aiName, result) {
+            if (result.error) {
+                return `
+                    <div class="ai-result-card ${aiType}">
+                        <div class="ai-result-header">
+                            <div class="ai-icon ${aiType}"></div>
+                            ${aiName}
+                        </div>
+                        <div class="ai-error">${result.error}</div>
+                    </div>
+                `;
+            }
+            
+            let html = `
+                <div class="ai-result-card ${aiType}">
+                    <div class="ai-result-header">
+                        <div class="ai-icon ${aiType}"></div>
+                        ${aiName}
+                    </div>
+            `;
+            
+            if (result.improvements && Array.isArray(result.improvements)) {
+                result.improvements.forEach((improvement, index) => {
+                    const itemId = `${aiType}-improvement-${index}`;
+                    html += `
+                        <div class="ai-improvement-item">
+                            <div class="ai-improvement-header" onclick="toggleAIImprovementContent('${itemId}')">
+                                <div>
+                                    <strong>${improvement.title || 'AI提案'}</strong>
+                                    ${improvement.priority ? `<span class="priority-badge ${improvement.priority}">${improvement.priority}</span>` : ''}
+                                </div>
+                                <span class="toggle-icon">▼</span>
+                            </div>
+                            <div class="ai-improvement-content" id="${itemId}">
+                                ${improvement.conclusion ? `
+                                    <div class="ai-improvement-conclusion">
+                                        <h6>💡 結論（コピペで使用可能）</h6>
+                                        <div>${improvement.conclusion}</div>
+                                    </div>
+                                ` : ''}
+                                ${improvement.explanation ? `
+                                    <div class="ai-improvement-explanation">
+                                        <strong>📝 説明・根拠</strong><br>
+                                        ${improvement.explanation}
+                                    </div>
+                                ` : ''}
+                                ${improvement.expectedResult ? `
+                                    <div class="ai-improvement-explanation">
+                                        <strong>🎯 期待される効果</strong><br>
+                                        ${improvement.expectedResult}
+                                    </div>
+                                ` : ''}
+                            </div>
+                        </div>
+                    `;
+                });
+            } else if (result.rawText) {
+                html += `<div class="ai-error">構造化されていないテキスト応答: ${result.rawText.substring(0, 200)}...</div>`;
+            } else {
+                html += `<div class="ai-error">分析結果が取得できませんでした</div>`;
+            }
+            
+            html += `</div>`;
+            return html;
+        }
+
+        // 最終統合提案セクション作成
+        function createFinalSuggestionSection(finalSuggestion) {
+            let html = `
+                <div class="final-suggestion-section">
+                    <div class="final-suggestion-header">
+                        <h3>🏆 統合最終提案 (3AI分析結果を統合)</h3>
+                    </div>
+                    <div class="final-analysis-grid">
+            `;
+            
+            // Gemini最終提案
+            if (finalSuggestion.gemini && finalSuggestion.gemini.finalImprovement) {
+                html += createFinalAnalysisCard('Gemini統合案', finalSuggestion.gemini.finalImprovement);
+            }
+            
+            // OpenAI最終提案
+            if (finalSuggestion.openai && finalSuggestion.openai.finalImprovement) {
+                html += createFinalAnalysisCard('OpenAI統合案', finalSuggestion.openai.finalImprovement);
+            }
+            
+            // Claude最終提案
+            if (finalSuggestion.claude && finalSuggestion.claude.finalImprovement) {
+                html += createFinalAnalysisCard('Claude統合案', finalSuggestion.claude.finalImprovement);
+            }
+            
+            html += `
+                    </div>
+                </div>
+            `;
+            
+            return html;
+        }
+
+        // 最終分析カード作成
+        function createFinalAnalysisCard(title, finalImprovement) {
+            return `
+                <div class="final-analysis-card">
+                    <h4>${title}</h4>
+                    ${finalImprovement.conclusion ? `
+                        <div class="final-conclusion">
+                            <h5>🎯 最終結論</h5>
+                            <div>${finalImprovement.conclusion}</div>
+                        </div>
+                    ` : ''}
+                    ${finalImprovement.analysis ? `
+                        <div><strong>📊 統合分析:</strong><br>${finalImprovement.analysis}</div>
+                    ` : ''}
+                    ${finalImprovement.commonPoints && Array.isArray(finalImprovement.commonPoints) ? `
+                        <div><strong>🔗 共通指摘事項:</strong><br>• ${finalImprovement.commonPoints.join('<br>• ')}</div>
+                    ` : ''}
+                    ${finalImprovement.implementationOrder && Array.isArray(finalImprovement.implementationOrder) ? `
+                        <div class="implementation-order">
+                            <strong>📋 実装順序:</strong>
+                            <ol>
+                                ${finalImprovement.implementationOrder.map(step => `<li>${step}</li>`).join('')}
+                            </ol>
+                        </div>
+                    ` : ''}
+                    ${finalImprovement.expectedImpact ? `
+                        <div><strong>💫 期待効果:</strong><br>${finalImprovement.expectedImpact}</div>
+                    ` : ''}
+                </div>
+            `;
+        }
+
+        // AI改善項目のトグル
+        function toggleAIImprovementContent(itemId) {
+            const content = document.getElementById(itemId);
+            const header = content.previousElementSibling;
+            const icon = header.querySelector('.toggle-icon');
+            
+            if (content.classList.contains('collapsed')) {
+                content.classList.remove('collapsed');
+                icon.classList.remove('collapsed');
+            } else {
+                content.classList.add('collapsed');
+                icon.classList.add('collapsed');
+            }
+        }
+
+        // SEO改善提案の表示（従来版・互換性維持）
         function displaySEOImprovements(improvements, debug, geminiRaw) {
             const improvementsList = document.getElementById('improvementsList');
             const seoImprovements = document.getElementById('seoImprovements');
