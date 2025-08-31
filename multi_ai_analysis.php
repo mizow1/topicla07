@@ -236,26 +236,54 @@ function createAnalysisPrompt($html, $url, $structuralData) {
 5. **内部リンク戦略の改善**
 
 【出力形式】
-JSON形式で以下のように回答してください：
+JSON形式で以下の構造で回答してください（改善議題→各AIからの提案の構造）：
 
 {
-  \"improvements\": [
-    {
-      \"title\": \"改善項目名\",
-      \"conclusion\": \"【結論】コピペで使える具体的な改善案\",
+  \"improvementTopics\": {
+    \"title\": {
+      \"aiName\": \"あなたのAI名\",
+      \"conclusion\": \"【結論】コピペで使える具体的なタイトル改善案\",
+      \"explanation\": \"この改善案の根拠と詳細説明\",
+      \"priority\": \"high/medium/low\",
+      \"expectedResult\": \"期待される効果\"
+    },
+    \"metaDescription\": {
+      \"aiName\": \"あなたのAI名\",
+      \"conclusion\": \"【結論】コピペで使える具体的なメタディスクリプション改善案\",
+      \"explanation\": \"この改善案の根拠と詳細説明\",
+      \"priority\": \"high/medium/low\",
+      \"expectedResult\": \"期待される効果\"
+    },
+    \"headingStructure\": {
+      \"aiName\": \"あなたのAI名\",
+      \"conclusion\": \"【結論】コピペで使える具体的な見出し構造改善案\",
+      \"explanation\": \"この改善案の根拠と詳細説明\",
+      \"priority\": \"high/medium/low\",
+      \"expectedResult\": \"期待される効果\"
+    },
+    \"contentImprovement\": {
+      \"aiName\": \"あなたのAI名\",
+      \"conclusion\": \"【結論】コピペで使える具体的なコンテンツ内容改善案\",
+      \"explanation\": \"この改善案の根拠と詳細説明\",
+      \"priority\": \"high/medium/low\",
+      \"expectedResult\": \"期待される効果\"
+    },
+    \"internalLinks\": {
+      \"aiName\": \"あなたのAI名\",
+      \"conclusion\": \"【結論】コピペで使える具体的な内部リンク戦略改善案\",
       \"explanation\": \"この改善案の根拠と詳細説明\",
       \"priority\": \"high/medium/low\",
       \"expectedResult\": \"期待される効果\"
     }
-  ]
+  }
 }";
 }
 
 // 最終分析プロンプト作成
 function createFinalAnalysisPrompt($aiResults, $url) {
-    $geminiText = isset($aiResults['gemini']['improvements']) ? json_encode($aiResults['gemini']['improvements'], JSON_UNESCAPED_UNICODE) : '分析結果なし';
-    $openaiText = isset($aiResults['openai']['improvements']) ? json_encode($aiResults['openai']['improvements'], JSON_UNESCAPED_UNICODE) : '分析結果なし';
-    $claudeText = isset($aiResults['claude']['improvements']) ? json_encode($aiResults['claude']['improvements'], JSON_UNESCAPED_UNICODE) : '分析結果なし';
+    $geminiText = isset($aiResults['gemini']['improvementTopics']) ? json_encode($aiResults['gemini']['improvementTopics'], JSON_UNESCAPED_UNICODE) : '分析結果なし';
+    $openaiText = isset($aiResults['openai']['improvementTopics']) ? json_encode($aiResults['openai']['improvementTopics'], JSON_UNESCAPED_UNICODE) : '分析結果なし';
+    $claudeText = isset($aiResults['claude']['improvementTopics']) ? json_encode($aiResults['claude']['improvementTopics'], JSON_UNESCAPED_UNICODE) : '分析結果なし';
     
     return "あなたは統合SEOアナリストです。3つのAIによる以下の分析結果を統合し、最も効果的な改善案を作成してください。
 
@@ -271,23 +299,56 @@ function createFinalAnalysisPrompt($aiResults, $url) {
 {$claudeText}
 
 【重要】
-1. まず結論として、コピペで実際のサイトに使える具体的な改善案を提示
+1. 各改善議題（タイトル、メタディスクリプション、見出し構造、コンテンツ内容、内部リンク）について、3AIの提案を統合
 2. 3つのAI分析結果の共通点と相違点を分析
 3. 最も効果的な改善案を統合的に判断
 4. 実装難易度と効果の両方を考慮
 
 【出力形式】
-JSON形式で以下のように回答してください：
+JSON形式で以下の構造で回答してください（改善議題→統合最終提案の構造）：
 
 {
-  \"finalImprovement\": {
-    \"title\": \"統合最終改善案\",
-    \"conclusion\": \"【最終結論】最も効果的でコピペで使える改善案\",
-    \"analysis\": \"3AI分析結果の統合評価\",
-    \"commonPoints\": [\"3AIの共通指摘事項\"],
-    \"bestPractice\": \"統合的に判断した最適解\",
-    \"implementationOrder\": [\"実装する順序\"],
-    \"expectedImpact\": \"期待される効果の詳細\"
+  \"finalTopicSuggestions\": {
+    \"title\": {
+      \"finalConclusion\": \"【統合結論】3AI統合による最終タイトル改善案\",
+      \"aiComparison\": \"3AIの提案比較と評価\",
+      \"bestChoice\": \"最適な選択とその理由\",
+      \"implementationPriority\": \"high/medium/low\",
+      \"expectedImpact\": \"期待される効果の詳細\"
+    },
+    \"metaDescription\": {
+      \"finalConclusion\": \"【統合結論】3AI統合による最終メタディスクリプション改善案\",
+      \"aiComparison\": \"3AIの提案比較と評価\",
+      \"bestChoice\": \"最適な選択とその理由\",
+      \"implementationPriority\": \"high/medium/low\",
+      \"expectedImpact\": \"期待される効果の詳細\"
+    },
+    \"headingStructure\": {
+      \"finalConclusion\": \"【統合結論】3AI統合による最終見出し構造改善案\",
+      \"aiComparison\": \"3AIの提案比較と評価\",
+      \"bestChoice\": \"最適な選択とその理由\",
+      \"implementationPriority\": \"high/medium/low\",
+      \"expectedImpact\": \"期待される効果の詳細\"
+    },
+    \"contentImprovement\": {
+      \"finalConclusion\": \"【統合結論】3AI統合による最終コンテンツ内容改善案\",
+      \"aiComparison\": \"3AIの提案比較と評価\",
+      \"bestChoice\": \"最適な選択とその理由\",
+      \"implementationPriority\": \"high/medium/low\",
+      \"expectedImpact\": \"期待される効果の詳細\"
+    },
+    \"internalLinks\": {
+      \"finalConclusion\": \"【統合結論】3AI統合による最終内部リンク戦略改善案\",
+      \"aiComparison\": \"3AIの提案比較と評価\",
+      \"bestChoice\": \"最適な選択とその理由\",
+      \"implementationPriority\": \"high/medium/low\",
+      \"expectedImpact\": \"期待される効果の詳細\"
+    }
+  },
+  \"overallSummary\": {
+    \"totalAnalysis\": \"全体的な分析結果の統合\",
+    \"implementationOrder\": [\"実装すべき順序\"],
+    \"totalExpectedImpact\": \"全体的な期待効果\"
   }
 }";
 }
@@ -323,13 +384,25 @@ function analyzeWithGeminiAPI($prompt, $apiKey) {
     curl_close($ch);
     
     if ($httpCode !== 200 || !$response) {
-        throw new Exception('Gemini API呼び出しに失敗しました');
+        $errorDetails = [
+            'httpCode' => $httpCode,
+            'curlError' => curl_error($ch),
+            'response' => $response
+        ];
+        error_log('Gemini API Error: ' . json_encode($errorDetails, JSON_UNESCAPED_UNICODE));
+        throw new Exception('Gemini API呼び出しに失敗しました。HTTPコード: ' . $httpCode . ', エラー: ' . curl_error($ch));
     }
     
     $result = json_decode($response, true);
     
+    if (json_last_error() !== JSON_ERROR_NONE) {
+        error_log('Gemini JSON Parse Error: ' . json_last_error_msg() . ', Response: ' . $response);
+        throw new Exception('Gemini APIレスポンスのJSON解析に失敗: ' . json_last_error_msg());
+    }
+    
     if (!isset($result['candidates'][0]['content']['parts'][0]['text'])) {
-        throw new Exception('Gemini APIからの応答が不正です');
+        error_log('Gemini Invalid Response Structure: ' . json_encode($result, JSON_UNESCAPED_UNICODE));
+        throw new Exception('Gemini APIからの応答が不正です。レスポンス構造: ' . json_encode($result, JSON_UNESCAPED_UNICODE));
     }
     
     $geminiText = $result['candidates'][0]['content']['parts'][0]['text'];
@@ -343,12 +416,11 @@ function analyzeWithGeminiAPI($prompt, $apiKey) {
 // OpenAI API分析
 function analyzeWithOpenAI($prompt, $apiKey) {
     $data = [
-        'model' => 'gpt-4-turbo-preview',
+        'model' => 'gpt-4o',
         'messages' => [
             ['role' => 'user', 'content' => $prompt]
         ],
         'temperature' => 0.3,
-        'max_tokens' => 2048
     ];
     
     $ch = curl_init();
@@ -367,13 +439,25 @@ function analyzeWithOpenAI($prompt, $apiKey) {
     curl_close($ch);
     
     if ($httpCode !== 200 || !$response) {
-        throw new Exception('OpenAI API呼び出しに失敗しました');
+        $errorDetails = [
+            'httpCode' => $httpCode,
+            'curlError' => curl_error($ch),
+            'response' => $response
+        ];
+        error_log('OpenAI API Error: ' . json_encode($errorDetails, JSON_UNESCAPED_UNICODE));
+        throw new Exception('OpenAI API呼び出しに失敗しました。HTTPコード: ' . $httpCode . ', エラー: ' . curl_error($ch));
     }
     
     $result = json_decode($response, true);
     
+    if (json_last_error() !== JSON_ERROR_NONE) {
+        error_log('OpenAI JSON Parse Error: ' . json_last_error_msg() . ', Response: ' . $response);
+        throw new Exception('OpenAI APIレスポンスのJSON解析に失敗: ' . json_last_error_msg());
+    }
+    
     if (!isset($result['choices'][0]['message']['content'])) {
-        throw new Exception('OpenAI APIからの応答が不正です');
+        error_log('OpenAI Invalid Response Structure: ' . json_encode($result, JSON_UNESCAPED_UNICODE));
+        throw new Exception('OpenAI APIからの応答が不正です。レスポンス構造: ' . json_encode($result, JSON_UNESCAPED_UNICODE));
     }
     
     $openaiText = $result['choices'][0]['message']['content'];
@@ -381,13 +465,18 @@ function analyzeWithOpenAI($prompt, $apiKey) {
     // JSONを抽出
     $jsonData = extractJsonFromResponse($openaiText);
     
-    return $jsonData ?: ['rawText' => $openaiText];
+    if (!$jsonData) {
+        error_log('OpenAI JSON extraction failed from text: ' . $openaiText);
+        throw new Exception('OpenAI APIレスポンスからJSONの抽出に失敗しました。構造化されていないテキスト応答: ' . substr($openaiText, 0, 500) . '...');
+    }
+    
+    return $jsonData;
 }
 
 // Claude API分析
 function analyzeWithClaude($prompt, $apiKey) {
     $data = [
-        'model' => 'claude-3-5-sonnet-20241022',
+        'model' => 'claude-3-7-sonnet-latest',
         'max_tokens' => 2048,
         'messages' => [
             ['role' => 'user', 'content' => $prompt]
@@ -412,13 +501,25 @@ function analyzeWithClaude($prompt, $apiKey) {
     curl_close($ch);
     
     if ($httpCode !== 200 || !$response) {
-        throw new Exception('Claude API呼び出しに失敗しました');
+        $errorDetails = [
+            'httpCode' => $httpCode,
+            'curlError' => curl_error($ch),
+            'response' => $response
+        ];
+        error_log('Claude API Error: ' . json_encode($errorDetails, JSON_UNESCAPED_UNICODE));
+        throw new Exception('Claude API呼び出しに失敗しました。HTTPコード: ' . $httpCode . ', エラー: ' . curl_error($ch));
     }
     
     $result = json_decode($response, true);
     
+    if (json_last_error() !== JSON_ERROR_NONE) {
+        error_log('Claude JSON Parse Error: ' . json_last_error_msg() . ', Response: ' . $response);
+        throw new Exception('Claude APIレスポンスのJSON解析に失敗: ' . json_last_error_msg());
+    }
+    
     if (!isset($result['content'][0]['text'])) {
-        throw new Exception('Claude APIからの応答が不正です');
+        error_log('Claude Invalid Response Structure: ' . json_encode($result, JSON_UNESCAPED_UNICODE));
+        throw new Exception('Claude APIからの応答が不正です。レスポンス構造: ' . json_encode($result, JSON_UNESCAPED_UNICODE));
     }
     
     $claudeText = $result['content'][0]['text'];
@@ -426,7 +527,12 @@ function analyzeWithClaude($prompt, $apiKey) {
     // JSONを抽出
     $jsonData = extractJsonFromResponse($claudeText);
     
-    return $jsonData ?: ['rawText' => $claudeText];
+    if (!$jsonData) {
+        error_log('Claude JSON extraction failed from text: ' . $claudeText);
+        throw new Exception('Claude APIレスポンスからJSONの抽出に失敗しました。構造化されていないテキスト応答: ' . substr($claudeText, 0, 500) . '...');
+    }
+    
+    return $jsonData;
 }
 
 // レスポンスからJSONを抽出

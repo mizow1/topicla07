@@ -308,3 +308,535 @@
     background: rgba(255,255,255,0.25);
     transition: background 0.3s ease;
 }
+
+/* 新構造対応スタイル */
+.topic-based-final-section {
+    margin-top: 20px;
+}
+
+.topic-based-final-section h4 {
+    margin: 0 0 20px 0;
+    color: #ffffff;
+    font-size: 20px;
+    text-align: center;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+}
+
+.topic-suggestions-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 15px;
+    margin: 20px 0;
+}
+
+.topic-suggestion-card {
+    background: rgba(255,255,255,0.15);
+    border-radius: 8px;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255,255,255,0.2);
+    overflow: hidden;
+    transition: all 0.3s ease;
+}
+
+.topic-suggestion-card:hover {
+    background: rgba(255,255,255,0.25);
+    transform: translateY(-2px);
+}
+
+.topic-suggestion-header {
+    background: rgba(255,255,255,0.1);
+    padding: 12px 15px;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-weight: 600;
+    color: #ffffff;
+    transition: background-color 0.2s;
+}
+
+.topic-suggestion-header:hover {
+    background: rgba(255,255,255,0.2);
+}
+
+.topic-suggestion-content {
+    padding: 15px;
+    color: rgba(255,255,255,0.9);
+}
+
+.topic-suggestion-content.collapsed {
+    display: none;
+}
+
+.ai-comparison {
+    background: rgba(255,255,255,0.1);
+    padding: 15px;
+    margin: 15px 0;
+    border-radius: 6px;
+    border-left: 4px solid #81c784;
+}
+
+.best-choice {
+    background: rgba(255,235,59,0.2);
+    padding: 15px;
+    margin: 15px 0;
+    border-radius: 6px;
+    border-left: 4px solid #ffeb3b;
+}
+
+.expected-impact {
+    background: rgba(255,255,255,0.1);
+    padding: 15px;
+    margin: 15px 0;
+    border-radius: 6px;
+    border-left: 4px solid #64b5f6;
+}
+
+.overall-summary-section {
+    margin-top: 25px;
+    padding: 20px;
+    background: rgba(255,255,255,0.15);
+    border-radius: 8px;
+    border: 1px solid rgba(255,255,255,0.3);
+}
+
+.overall-summary-section h5 {
+    margin: 0 0 15px 0;
+    color: #ffeb3b;
+    font-size: 18px;
+    font-weight: bold;
+    text-align: center;
+}
+
+.overall-summary-section > div {
+    margin: 15px 0;
+    color: rgba(255,255,255,0.9);
+    line-height: 1.6;
+}
+
+/* 改善議題ベース分析の新スタイル */
+.analysis-status-container {
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 20px;
+    margin: 20px 0;
+    border: 1px solid #e9ecef;
+}
+
+.analysis-status-container.minimized {
+    padding: 10px 20px;
+    background: #e8f4fd;
+    border-color: #bee5eb;
+}
+
+.analysis-status-container.minimized h3 {
+    margin: 0;
+    font-size: 16px;
+    color: #0c5460;
+}
+
+.ai-status-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 15px;
+    margin: 15px 0;
+}
+
+.ai-status-card {
+    background: white;
+    border: 2px solid #e9ecef;
+    border-radius: 8px;
+    padding: 15px;
+    text-align: center;
+    transition: all 0.3s ease;
+}
+
+.ai-status-card.analyzing {
+    border-color: #ffc107;
+    background: #fff8e1;
+    animation: analyzing-pulse 2s infinite;
+}
+
+.ai-status-card.completed {
+    border-color: #28a745;
+    background: #d4edda;
+}
+
+.ai-status-card.error {
+    border-color: #dc3545;
+    background: #f8d7da;
+}
+
+@keyframes analyzing-pulse {
+    0% { border-color: #ffc107; }
+    50% { border-color: #ff8f00; }
+    100% { border-color: #ffc107; }
+}
+
+.ai-status-header {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 10px;
+    font-weight: bold;
+}
+
+.ai-status-header .ai-name {
+    margin-left: 8px;
+    font-size: 14px;
+}
+
+.ai-status-indicator {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin-bottom: 5px;
+}
+
+.status-spinner {
+    width: 16px;
+    height: 16px;
+    border: 2px solid #f3f3f3;
+    border-top: 2px solid #007bff;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.ai-analysis-time {
+    font-size: 12px;
+    color: #6c757d;
+    margin-top: 5px;
+}
+
+.ai-error-details {
+    background: #fff5f5;
+    border: 1px solid #feb2b2;
+    border-radius: 4px;
+    padding: 8px;
+    margin-top: 8px;
+    font-size: 11px;
+    color: #c53030;
+    text-align: left;
+    max-height: 60px;
+    overflow-y: auto;
+}
+
+/* 改善議題ベースの結果表示 */
+.topic-based-analysis {
+    margin-top: 20px;
+}
+
+.topics-container {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.topic-section {
+    background: white;
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    transition: all 0.3s ease;
+}
+
+.topic-section:hover {
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+    transform: translateY(-2px);
+}
+
+.topic-section.all-ai-completed {
+    border-color: #28a745;
+    box-shadow: 0 2px 8px rgba(40, 167, 69, 0.2);
+}
+
+.topic-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 15px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.topic-header h4 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 600;
+}
+
+.topic-progress {
+    background: rgba(255,255,255,0.2);
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: bold;
+}
+
+.ai-proposals {
+    padding: 0;
+}
+
+.ai-proposal {
+    border-bottom: 1px solid #f1f3f4;
+}
+
+.ai-proposal:last-child {
+    border-bottom: none;
+}
+
+.ai-proposal-header {
+    background: #f8f9fa;
+    padding: 12px 20px;
+    display: flex;
+    align-items: center;
+    font-weight: 600;
+    color: #495057;
+    border-left: 4px solid #e9ecef;
+}
+
+.ai-proposal.gemini .ai-proposal-header {
+    border-left-color: #4285f4;
+}
+
+.ai-proposal.openai .ai-proposal-header {
+    border-left-color: #00a67e;
+}
+
+.ai-proposal.claude .ai-proposal-header {
+    border-left-color: #ff6b35;
+}
+
+.ai-proposal-header .ai-icon {
+    margin-right: 8px;
+}
+
+.ai-proposal-content {
+    padding: 20px;
+}
+
+.proposal-conclusion {
+    background: #e7f3ff;
+    border-left: 4px solid #0066cc;
+    padding: 15px;
+    margin-bottom: 15px;
+    border-radius: 0 4px 4px 0;
+}
+
+.proposal-conclusion h6 {
+    margin: 0 0 10px 0;
+    color: #0066cc;
+    font-weight: bold;
+    font-size: 14px;
+}
+
+.conclusion-text {
+    line-height: 1.6;
+    color: #2c3e50;
+}
+
+.proposal-explanation h6 {
+    margin: 0 0 10px 0;
+    color: #495057;
+    font-weight: bold;
+    font-size: 14px;
+}
+
+.explanation-text {
+    color: #555;
+    line-height: 1.6;
+    margin-bottom: 15px;
+}
+
+.proposal-metadata {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    flex-wrap: wrap;
+}
+
+.expected-result {
+    font-size: 14px;
+    color: #495057;
+}
+
+/* 統合最終提案 */
+.final-integrated-proposal {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    margin-top: 0;
+}
+
+.final-proposal-header {
+    padding: 15px 20px;
+    background: rgba(255,255,255,0.1);
+    border-bottom: 1px solid rgba(255,255,255,0.2);
+}
+
+.final-proposal-header h5 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: bold;
+}
+
+.final-proposal-content {
+    padding: 20px;
+}
+
+.final-conclusion {
+    background: rgba(255,255,255,0.15);
+    border-left: 4px solid #ffeb3b;
+    padding: 15px;
+    margin-bottom: 15px;
+    border-radius: 0 4px 4px 0;
+}
+
+.final-conclusion h6 {
+    margin: 0 0 10px 0;
+    color: #ffeb3b;
+    font-weight: bold;
+    font-size: 14px;
+}
+
+.final-conclusion-text {
+    line-height: 1.6;
+    color: rgba(255,255,255,0.95);
+}
+
+.ai-comparison {
+    background: rgba(255,255,255,0.1);
+    padding: 15px;
+    margin: 15px 0;
+    border-radius: 6px;
+    border-left: 4px solid #81c784;
+}
+
+.ai-comparison h6 {
+    margin: 0 0 10px 0;
+    color: #81c784;
+    font-weight: bold;
+    font-size: 14px;
+}
+
+.comparison-text {
+    color: rgba(255,255,255,0.9);
+    line-height: 1.6;
+}
+
+.best-choice {
+    background: rgba(255,235,59,0.2);
+    padding: 15px;
+    margin: 15px 0;
+    border-radius: 6px;
+    border-left: 4px solid #ffeb3b;
+}
+
+.best-choice h6 {
+    margin: 0 0 10px 0;
+    color: #ffeb3b;
+    font-weight: bold;
+    font-size: 14px;
+}
+
+.best-choice-text {
+    color: rgba(255,255,255,0.9);
+    line-height: 1.6;
+}
+
+.final-metadata {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    flex-wrap: wrap;
+    margin-top: 15px;
+}
+
+.expected-impact {
+    color: rgba(255,255,255,0.9);
+    font-size: 14px;
+}
+
+/* 総合サマリー */
+.overall-summary-section {
+    background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
+    color: white;
+    border-radius: 8px;
+    padding: 25px;
+    margin: 20px 0;
+}
+
+.overall-summary-section h4 {
+    margin: 0 0 20px 0;
+    text-align: center;
+    font-size: 20px;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+}
+
+.summary-content > div {
+    background: rgba(255,255,255,0.1);
+    padding: 15px;
+    margin: 15px 0;
+    border-radius: 6px;
+    border-left: 4px solid #3498db;
+}
+
+.summary-content h6 {
+    margin: 0 0 10px 0;
+    color: #87ceeb;
+    font-weight: bold;
+    font-size: 14px;
+}
+
+.implementation-order ol {
+    margin: 10px 0 0 0;
+    padding-left: 20px;
+}
+
+.implementation-order li {
+    margin: 8px 0;
+    color: rgba(255,255,255,0.9);
+    line-height: 1.4;
+}
+
+/* レスポンシブ対応 */
+@media (max-width: 768px) {
+    .topic-suggestions-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .topic-based-final-section {
+        padding: 15px;
+    }
+    
+    .topic-suggestion-card {
+        margin: 10px 0;
+    }
+    
+    .ai-status-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .proposal-metadata,
+    .final-metadata {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+    }
+    
+    .topic-header {
+        flex-direction: column;
+        gap: 10px;
+        align-items: flex-start;
+    }
+    
+    .topic-section:hover {
+        transform: none;
+    }
+}

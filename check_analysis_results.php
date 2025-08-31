@@ -1,4 +1,9 @@
 <?php
+// エラーを表示してデバッグ
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
+
 require_once 'config.php';
 
 header('Content-Type: application/json');
@@ -20,24 +25,20 @@ if (empty($url)) {
 }
 
 try {
-    // テーブルが存在するかチェック
-    $tableCheck = $pdo->query("SHOW TABLES LIKE 'multi_ai_analyses'");
-    if ($tableCheck->rowCount() === 0) {
-        // テーブルが存在しない場合は作成
-        $createTableSQL = "CREATE TABLE IF NOT EXISTS multi_ai_analyses (
-            id INT AUTO_INCREMENT PRIMARY KEY,
-            url VARCHAR(2048) NOT NULL,
-            results TEXT,
-            final_suggestion TEXT,
-            status ENUM('analyzing', 'completed', 'failed') DEFAULT 'analyzing',
-            analysis_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            INDEX idx_url (url(255)),
-            INDEX idx_status (status),
-            INDEX idx_date (analysis_date)
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci";
-        
-        $pdo->exec($createTableSQL);
-    }
+    // より安全なテーブル作成アプローチ
+    $createTableSQL = "CREATE TABLE IF NOT EXISTS multi_ai_analyses (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        url VARCHAR(2048) NOT NULL,
+        results TEXT,
+        final_suggestion TEXT,
+        status ENUM('analyzing', 'completed', 'failed') DEFAULT 'analyzing',
+        analysis_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        INDEX idx_url (url(255)),
+        INDEX idx_status (status),
+        INDEX idx_date (analysis_date)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci";
+    
+    $pdo->exec($createTableSQL);
     
     // 既存の分析結果があるかチェック
     $stmt = $pdo->prepare("SELECT * FROM multi_ai_analyses WHERE url = ? AND status = 'completed' ORDER BY analysis_date DESC LIMIT 1");
@@ -58,13 +59,22 @@ try {
     }
     
 } catch (PDOException $e) {
-    // データベースエラーの場合は詳細をログに記録（本番環境では削除）
+    // データベースエラーの場合は詳細をログに記録
     error_log("Database error in check_analysis_results.php: " . $e->getMessage());
     
     echo json_encode([
-        'success' => true,
+        'success' => false,
         'hasAnalysis' => false,
-        'debug' => $e->getMessage() // デバッグ用（本番環境では削除）
+        'error' => 'Database error: ' . $e->getMessage()
+    ]);
+} catch (Exception $e) {
+    // その他のエラー
+    error_log("General error in check_analysis_results.php: " . $e->getMessage());
+    
+    echo json_encode([
+        'success' => false,
+        'hasAnalysis' => false,
+        'error' => 'General error: ' . $e->getMessage()
     ]);
 }
 ?>
